@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 
-export const ORDER_STATUSES = ['AWAITING_PAYMENT', 'PAYMENT_SUBMITTED', 'PAYMENT_APPROVED', 'PAYMENT_REJECTED', 'CANCELLED'];
+export const ORDER_STATUSES = ['AWAITING_PAYMENT', 'PAYMENT_DECLARED', 'PAYMENT_SUBMITTED', 'PAYMENT_APPROVED', 'PAYMENT_REJECTED', 'PAYMENT_EVIDENCE_EXPIRED', 'CANCELLED', 'EXPIRED'];
+export const INVENTORY_STATUSES = ['RESERVED', 'SOLD', 'RELEASED'];
 const orderItemSchema = new mongoose.Schema({
   stallId: { type: mongoose.Schema.Types.ObjectId, ref: 'Stall', required: true },
   foodItemId: { type: mongoose.Schema.Types.ObjectId, ref: 'FoodItem', required: true },
@@ -15,6 +16,11 @@ const orderSchema = new mongoose.Schema({
   totalQuantity: { type: Number, required: true, min: 1 },
   totalAmount: { type: Number, required: true, min: 0 },
   status: { type: String, enum: ORDER_STATUSES, default: 'AWAITING_PAYMENT', index: true },
+  inventoryStatus: { type: String, enum: INVENTORY_STATUSES, default: 'RESERVED', index: true },
+  paymentReference: { type: String, required: true, unique: true, index: true },
+  reservationExpiresAt: { type: Date, required: true, index: true },
+  paymentDeclaredAt: Date,
+  paymentProofExpiresAt: { type: Date, index: true },
 }, { timestamps: true });
 
 export default mongoose.model('Order', orderSchema);

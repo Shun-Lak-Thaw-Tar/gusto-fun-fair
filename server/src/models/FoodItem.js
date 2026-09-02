@@ -8,8 +8,14 @@ const foodItemSchema = new mongoose.Schema({
   eventDayPrice: { type: Number, required: true, min: 0 },
   image: mediaSchemaDefinition,
   ticketLimit: { type: Number, required: true, min: 0, validate: Number.isInteger },
+  reservedTickets: { type: Number, default: 0, min: 0, validate: Number.isInteger },
+  soldTickets: { type: Number, default: 0, min: 0, validate: Number.isInteger },
   isAvailable: { type: Boolean, default: true },
 }, { timestamps: true });
 
 foodItemSchema.index({ stallId: 1, name: 1 }, { unique: true });
+foodItemSchema.virtual('ticketsRemaining').get(function getTicketsRemaining() {
+  return Math.max(0, this.ticketLimit - (this.reservedTickets || 0) - (this.soldTickets || 0));
+});
+foodItemSchema.set('toJSON', { virtuals: true });
 export default mongoose.model('FoodItem', foodItemSchema);

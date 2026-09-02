@@ -4,6 +4,7 @@ import env from '../src/config/env.js';
 import FoodItem from '../src/models/FoodItem.js';
 import Stall from '../src/models/Stall.js';
 import User from '../src/models/User.js';
+import EventConfig from '../src/models/EventConfig.js';
 import stalls from './data/stalls.js';
 import foodItems from './data/foodItems.js';
 
@@ -20,6 +21,15 @@ try {
   const savedStalls = await Stall.find({ stallName: { $in: stalls.map((stall) => stall.stallName) } });
   const stallIds = new Map(savedStalls.map((stall) => [stall.stallName, stall._id]));
   for (const { stallName, ...foodData } of foodItems) await FoodItem.findOneAndUpdate({ stallId: stallIds.get(stallName), name: foodData.name }, { ...foodData, stallId: stallIds.get(stallName), image: { url: `/demo/foods/${foodData.name.toLowerCase().replaceAll(' ', '-')}.jpg`, storageKey: '', provider: 'demo-local' } }, { upsert: true, new: true, runValidators: true });
+  await FoodItem.updateMany({ reservedTickets: { $exists: false } }, { $set: { reservedTickets: 0 } });
+  await FoodItem.updateMany({ soldTickets: { $exists: false } }, { $set: { soldTickets: 0 } });
+  const demoEvent = {
+    configKey: 'current', eventName: 'DEMO Fun Fair 2030', eventDate: new Date('2030-02-15T09:00:00+06:30'),
+    preorderOpenAt: new Date('2026-01-01T00:00:00+06:30'), preorderCloseAt: new Date('2030-02-14T09:00:00+06:30'), orderingEnabled: true,
+    kbzAccountName: 'DEMO FUN FAIR ACCOUNT', kbzAccountNumber: 'DEMO-000000000', paymentInstructions: 'DEMO ONLY: include the order payment reference in the KBZ payment note.',
+    orderReservationMinutes: 60, paymentProofGraceMinutes: 30,
+  };
+  await EventConfig.updateOne({ configKey: 'current' }, { $setOnInsert: demoEvent }, { upsert: true, runValidators: true, timestamps: false });
   const adminName = process.env.SEED_ADMIN_NAME?.trim();
   const adminPassword = process.env.SEED_ADMIN_PASSWORD;
   if (adminName && adminPassword) {
@@ -27,7 +37,7 @@ try {
     await User.findOneAndUpdate({ nameNormalized: adminName.toLocaleLowerCase('en-US') }, { name: adminName, nameNormalized: adminName.toLocaleLowerCase('en-US'), passwordHash: await bcrypt.hash(adminPassword, 12), role: 'admin' }, { upsert: true, runValidators: true });
     console.log('Optional demo administrator seeded from environment variables');
   }
-  console.log(`Demo seed complete: ${stalls.length} stalls and ${foodItems.length} food items`);
+  console.log(`Demo seed complete: ${stalls.length} stalls, ${foodItems.length} food items, and current event configuration`);
 } catch (error) {
   console.error('Demo seed failed:', error.message);
   process.exitCode = 1;

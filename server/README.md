@@ -1,4 +1,4 @@
-# Fun Fair Backend Architecture V1
+# Fun Fair Backend V1.1
 
 Node.js 24, Express, MongoDB, and Mongoose REST API foundation for the college Fun Fair food pre-order and digital ticketing system.
 
@@ -18,7 +18,7 @@ The default local database is `mongodb://127.0.0.1:27017/funfair`. The seed is i
 
 - `src/models`: MongoDB schemas and validation
 - `src/controllers`: HTTP request handling
-- `src/services`: pricing, ticket, payment, inventory, and media boundaries
+- `src/services`: event rules, order lifecycle, pricing, ticket, payment, inventory, and media boundaries
 - `src/routes`: REST route composition
 - `src/middleware`: authentication, authorization, errors, and 404 handling
 - `seed`: development/demo catalog data and safe upsert script
@@ -29,22 +29,30 @@ Registration currently uses a unique name plus password; names are matched case-
 ## Implemented API foundation
 
 - `GET /api/health`
+- `GET /api/event`
 - `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me`
 - `GET /api/stalls`, `GET /api/stalls/:id`
 - `GET /api/foods`, `GET /api/foods/:id`
 - `GET|POST /api/orders`, `GET /api/orders/:id`
+- `POST /api/orders/:id/payment-declare`, `POST /api/orders/:id/cancel`
 - `POST /api/payments/orders/:orderId`
 - `GET /api/tickets/mine`; admin ticket lookup and redemption
 - `GET|POST /api/memories` (upload references only; two-photo eligibility enforced)
 - Admin payment review and best-selling-stall statistics
 
-Order requests contain food item IDs and quantities. The server loads current prices and stall discounts and stores the calculated price snapshot. Only approved payments count toward best-selling statistics. Manual admin payment approval creates exactly one ticket for the whole order; ticket codes are random and uniquely indexed. Redemption keeps both the ticket and an audit record and prevents reuse.
+Order requests contain only food item IDs and quantities. Duplicate IDs are consolidated, the server calculates authoritative price snapshots, and conditional MongoDB updates immediately reserve tickets. Reservations last for the configurable 60-minute demo default. After external KBZ payment, the customer must declare payment before that deadline and then has the configurable 30-minute demo grace period to submit proof. Declaration permanently locks normal user cancellation because payments are non-refundable.
+
+Expired undeclared orders become `EXPIRED`; declared orders without timely proof become `PAYMENT_EVIDENCE_EXPIRED`. Both release inventory exactly once. Submitted proofs remain reserved without timer expiry until an admin approves or rejects them. Approval converts reserved quantities to sold without changing remaining availability and creates one digital ticket. Rejection releases inventory, creates no ticket, and does not trigger or imply a refund. Only approved purchases count toward best-selling statistics.
+
+See [docs/API_CONTRACT.md](docs/API_CONTRACT.md) for request/response contracts and the complete lifecycle.
 
 ## Intentional V1 boundaries
 
-Stall and food records are demo data because final stall information is not available. MongoDB supports a dynamic number of stalls and foods, so real records can replace them without schema changes. Payment verification is manual KBZ verification; there is no gateway integration. The media service intentionally has no selected provider and models store provider-neutral references. Inventory reservation policy remains a documented placeholder until the team approves its rules. Website notifications are stored only in MongoDB; no external notification service is integrated.
+Stall, food, and current-event records are demo data because final information is not available. MongoDB supports a dynamic number of stalls and foods, so real records can replace them without schema changes. Payment verification is manual KBZ verification; there is no gateway or refund integration. The media service intentionally has no selected provider and models store provider-neutral references. Website notifications are stored only in MongoDB; no external notification service is integrated.
 
-Event configuration stores ordering windows and KBZ instructions. Its model enforces that pre-orders close at least one day before the event; final administration endpoints and ordering-window enforcement should be added when the team confirms the event-management workflow.
+Event configuration uses a unique `configKey: "current"` singleton. It stores ordering windows, reservation/grace durations, and KBZ instructions. The model enforces that pre-orders close at least one day before the event, and order creation enforces the enabled/open window server-side.
+
+Atomic conditional updates prevent any individual food item from exceeding its ticket limit. Multi-item orders compensate already-reserved items if a later reservation fails. A standalone MongoDB server cannot provide true multi-document ACID guarantees across several foods, the order, payment, notification, and ticket; transaction-capable replica-set or sharded deployment is required for that stronger guarantee.
 
 ## Scripts
 
