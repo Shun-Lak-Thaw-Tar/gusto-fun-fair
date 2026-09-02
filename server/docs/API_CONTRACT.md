@@ -84,6 +84,48 @@ Per-food reservation uses an atomic conditional update requiring `reservedTicket
 
 True multi-document ACID guarantees are unavailable on a standalone MongoDB deployment. A replica-set or sharded transaction-capable deployment is required to eliminate every possible process-crash window across multiple food documents and order/payment/ticket side effects.
 
+## Admin System future contract and ownership
+
+### Implemented Admin endpoints
+
+All require existing JWT authentication plus `role = "admin"`:
+
+- `GET /api/admin/payments` — submitted payments awaiting manual review
+- `PATCH /api/admin/payments/:id/review` — approve/reject through shared `paymentService`
+- `GET /api/admin/statistics/best-selling-stall` — approved-quantity leader; approved revenue breaks quantity ties, and `leaders` returns every exact tie
+- Existing ticket verification/redemption remains implemented at `GET /api/tickets/:code` and `POST /api/tickets/:code/redeem`, also admin-only
+
+### Planned, not implemented
+
+The protected router reserves `/api/admin/dashboard`, `/stalls`, `/foods`, `/orders`, `/tickets`, and `/event`. These subrouters currently expose no business endpoints. They must not be documented or treated as working CRUD APIs.
+
+Future work reuses the existing authentication and shared services. `pricingService`, `inventoryService`, `orderLifecycleService`, `paymentService`, `ticketService`, and `eventService` are shared business logic; Admin controllers must call them rather than duplicate transitions. `User`, `Stall`, `FoodItem`, `Order`, `Payment`, `Ticket`, `Redemption`, `Notification`, and `EventConfig` are coordinated shared contracts.
+
+Frozen order states are `AWAITING_PAYMENT`, `PAYMENT_DECLARED`, `PAYMENT_SUBMITTED`, `PAYMENT_APPROVED`, `PAYMENT_REJECTED`, `PAYMENT_EVIDENCE_EXPIRED`, `CANCELLED`, and `EXPIRED`. Frozen inventory states are `RESERVED`, `SOLD`, and `RELEASED`. Admin payment review accepts only `PAYMENT_SUBMITTED + RESERVED` orders and a `SUBMITTED` payment. Statuses change only through real approve/reject/cancel/expiry/redemption actions—never arbitrary status editing.
+
+### Whole-order redemption
+
+One approved multi-item/multi-stall order has one digital ticket. Redeeming it marks the whole order's physical food-ticket quantities as issued. V1 has no partial item redemption, and repeated redemption remains blocked.
+
+### Frozen dashboard/statistics definitions
+
+- Total Orders: all statuses
+- Awaiting Payment, Payment Declared, Pending Review, Approved, Rejected, and Cancelled: their exact matching statuses
+- Expired Orders: combined `EXPIRED + PAYMENT_EVIDENCE_EXPIRED` (separate cards are also permitted)
+- Approved Revenue: sum approved `Order.totalAmount`
+- Food Tickets Sold: sum item quantities in approved orders
+- Digital Tickets Issued: Ticket records for approved orders
+- Digital Tickets Redeemed: `REDEEMED` Ticket records
+- Physical Tickets Issued: order-item quantities associated with redeemed tickets
+
+Best-Selling Stall means greatest total item quantity in `PAYMENT_APPROVED` orders. Approved stall revenue is the first tie-breaker; return every leader if both remain tied. Stall/food history comes from OrderItem snapshots.
+
+### Admin data safety
+
+After orders exist, deactivate stalls (`isActive = false`) and foods (`isAvailable = false`) rather than hard-delete referenced records. A ticket-limit update must enforce `newTicketLimit >= reservedTickets + soldTickets` server-side. Price and discount edits affect future orders only; historical order snapshots are never recalculated.
+
+Event settings retain the `current` singleton, 60/30 defaults, `preorderOpenAt < preorderCloseAt`, and closing one day before the event. Updates affect future operations and never rewrite old order/payment/ticket timestamps or amounts. Canonical website notification types are `PAYMENT_APPROVED`, `PAYMENT_REJECTED`, `ORDER_EXPIRED`, and `PAYMENT_EVIDENCE_EXPIRED`.
+
 ## Customer-facing wording for the future frontend
 
 - Before payment: “Your food tickets are reserved for 1 hour.” “Only cancel this order if you have NOT completed the KBZ payment.” “Payments are non-refundable.”

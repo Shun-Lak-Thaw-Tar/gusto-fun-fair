@@ -1,2 +1,2 @@
-import { Router } from 'express'; import { bestSellingStall, listSubmittedPayments, reviewSubmittedPayment } from '../controllers/adminController.js'; import { requireAuth } from '../middleware/authMiddleware.js'; import { requireAdmin } from '../middleware/adminMiddleware.js';
-const router = Router(); router.use(requireAuth, requireAdmin); router.get('/payments', listSubmittedPayments); router.patch('/payments/:id/review', reviewSubmittedPayment); router.get('/statistics/best-selling-stall', bestSellingStall); export default router;
+// Backwards-compatible import path; new admin modules live under routes/admin/.
+export { default } from './admin/index.js';

@@ -18,8 +18,10 @@ The default local database is `mongodb://127.0.0.1:27017/funfair`. The seed is i
 
 - `src/models`: MongoDB schemas and validation
 - `src/controllers`: HTTP request handling
+- `src/controllers/admin`: isolated Admin developer controller boundary
 - `src/services`: event rules, order lifecycle, pricing, ticket, payment, inventory, and media boundaries
 - `src/routes`: REST route composition
+- `src/routes/admin`: one protected admin entry router with module-specific subrouters
 - `src/middleware`: authentication, authorization, errors, and 404 handling
 - `seed`: development/demo catalog data and safe upsert script
 - `test`: focused unit tests for pricing and ticket-code generation
@@ -46,11 +48,15 @@ Expired undeclared orders become `EXPIRED`; declared orders without timely proof
 
 See [docs/API_CONTRACT.md](docs/API_CONTRACT.md) for request/response contracts and the complete lifecycle.
 
+Parallel ownership and shared-logic rules are defined in [docs/TEAM_OWNERSHIP.md](docs/TEAM_OWNERSHIP.md). The future Admin System contract is defined in [docs/ADMIN_SYSTEM_SPEC.md](docs/ADMIN_SYSTEM_SPEC.md). The full Admin System is not implemented in V1.2; the folders are safe extension boundaries.
+
 ## Intentional V1 boundaries
 
 Stall, food, and current-event records are demo data because final information is not available. MongoDB supports a dynamic number of stalls and foods, so real records can replace them without schema changes. Payment verification is manual KBZ verification; there is no gateway or refund integration. The media service intentionally has no selected provider and models store provider-neutral references. Website notifications are stored only in MongoDB; no external notification service is integrated.
 
 Event configuration uses a unique `configKey: "current"` singleton. It stores ordering windows, reservation/grace durations, and KBZ instructions. The model enforces that pre-orders close at least one day before the event, and order creation enforces the enabled/open window server-side.
+
+**Production readiness:** `DEMO Fun Fair 2030`, demo KBZ details, demo stalls, and demo foods must be replaced and verified before real pre-order sales open. Once customer orders exist, deactivate referenced stalls/foods instead of hard-deleting them.
 
 Atomic conditional updates prevent any individual food item from exceeding its ticket limit. Multi-item orders compensate already-reserved items if a later reservation fails. A standalone MongoDB server cannot provide true multi-document ACID guarantees across several foods, the order, payment, notification, and ticket; transaction-capable replica-set or sharded deployment is required for that stronger guarantee.
 
