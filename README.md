@@ -13,4 +13,4 @@ College Fun Fair web application for pre-ordering food tickets.
 
 ## Status
 
-Backend Architecture V1 setup in progress.
+Backend Architecture V1 is located in [`server/`](server/README.md). The React frontend is intentionally outside this version's scope.
