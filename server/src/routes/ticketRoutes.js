@@ -1,0 +1,2 @@
+import { Router } from 'express'; import { listMyTickets, lookupTicket, redeemTicket } from '../controllers/ticketController.js'; import { requireAuth } from '../middleware/authMiddleware.js'; import { requireAdmin } from '../middleware/adminMiddleware.js';
+const router = Router(); router.get('/mine', requireAuth, listMyTickets); router.get('/:code', requireAuth, requireAdmin, lookupTicket); router.post('/:code/redeem', requireAuth, requireAdmin, redeemTicket); export default router;

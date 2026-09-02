@@ -1,0 +1,34 @@
+import bcrypt from 'bcryptjs';
+import { connectDatabase, disconnectDatabase } from '../src/config/db.js';
+import env from '../src/config/env.js';
+import FoodItem from '../src/models/FoodItem.js';
+import Stall from '../src/models/Stall.js';
+import User from '../src/models/User.js';
+import stalls from './data/stalls.js';
+import foodItems from './data/foodItems.js';
+
+const assertSafeDatabase = () => {
+  if (env.nodeEnv === 'production') throw new Error('Demo seeding is disabled in production');
+  const databaseName = new URL(env.mongoUri).pathname.slice(1).split('?')[0];
+  if (!databaseName || databaseName === 'admin' || databaseName === 'local' || databaseName === 'config') throw new Error('Refusing to seed an unsafe database target');
+};
+
+try {
+  assertSafeDatabase();
+  await connectDatabase();
+  for (const stallData of stalls) await Stall.findOneAndUpdate({ stallName: stallData.stallName }, stallData, { upsert: true, new: true, runValidators: true });
+  const savedStalls = await Stall.find({ stallName: { $in: stalls.map((stall) => stall.stallName) } });
+  const stallIds = new Map(savedStalls.map((stall) => [stall.stallName, stall._id]));
+  for (const { stallName, ...foodData } of foodItems) await FoodItem.findOneAndUpdate({ stallId: stallIds.get(stallName), name: foodData.name }, { ...foodData, stallId: stallIds.get(stallName), image: { url: `/demo/foods/${foodData.name.toLowerCase().replaceAll(' ', '-')}.jpg`, storageKey: '', provider: 'demo-local' } }, { upsert: true, new: true, runValidators: true });
+  const adminName = process.env.SEED_ADMIN_NAME?.trim();
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+  if (adminName && adminPassword) {
+    if (adminPassword.length < 8) throw new Error('SEED_ADMIN_PASSWORD must be at least 8 characters');
+    await User.findOneAndUpdate({ nameNormalized: adminName.toLocaleLowerCase('en-US') }, { name: adminName, nameNormalized: adminName.toLocaleLowerCase('en-US'), passwordHash: await bcrypt.hash(adminPassword, 12), role: 'admin' }, { upsert: true, runValidators: true });
+    console.log('Optional demo administrator seeded from environment variables');
+  }
+  console.log(`Demo seed complete: ${stalls.length} stalls and ${foodItems.length} food items`);
+} catch (error) {
+  console.error('Demo seed failed:', error.message);
+  process.exitCode = 1;
+} finally { await disconnectDatabase(); }
