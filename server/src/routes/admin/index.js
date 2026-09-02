@@ -1,0 +1,23 @@
+import { Router } from 'express';
+import { requireAuth } from '../../middleware/authMiddleware.js';
+import { requireAdmin } from '../../middleware/adminMiddleware.js';
+import dashboardRoutes from './dashboardRoutes.js';
+import eventRoutes from './eventRoutes.js';
+import foodRoutes from './foodRoutes.js';
+import orderRoutes from './orderRoutes.js';
+import paymentRoutes from './paymentRoutes.js';
+import stallRoutes from './stallRoutes.js';
+import statisticsRoutes from './statisticsRoutes.js';
+import ticketRoutes from './ticketRoutes.js';
+
+const router = Router();
+router.use(requireAuth, requireAdmin);
+router.use('/dashboard', dashboardRoutes);
+router.use('/stalls', stallRoutes);
+router.use('/foods', foodRoutes);
+router.use('/orders', orderRoutes);
+router.use('/payments', paymentRoutes);
+router.use('/tickets', ticketRoutes);
+router.use('/statistics', statisticsRoutes);
+router.use('/event', eventRoutes);
+export default router;
