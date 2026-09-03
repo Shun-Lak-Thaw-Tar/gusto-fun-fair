@@ -3,6 +3,7 @@ import { mediaSchemaDefinition } from './shared.js';
 
 const stallSchema = new mongoose.Schema({
   stallName: { type: String, required: true, trim: true, maxlength: 100 },
+  slug: { type: String, trim: true, lowercase: true, unique: true, sparse: true, immutable: true, match: /^[a-z0-9]+(?:-[a-z0-9]+)*$/ },
   batch: { type: String, required: true, trim: true, maxlength: 50 },
   description: { type: String, trim: true, maxlength: 500, default: '' },
   discount: {

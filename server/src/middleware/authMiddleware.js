@@ -10,6 +10,7 @@ export const requireAuth = async (req, _res, next) => {
     const payload = jwt.verify(token, env.jwtSecret);
     const user = await User.findById(payload.sub);
     if (!user) throw new ApiError(401, 'Authentication required');
+    if (user.isActive === false) throw new ApiError(403, 'Account is disabled');
     req.user = user;
     next();
   } catch (error) { next(error instanceof ApiError ? error : new ApiError(401, 'Invalid or expired token')); }

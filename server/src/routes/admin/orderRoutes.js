@@ -1,2 +1,6 @@
 import { Router } from 'express';
-export default Router();
+import { getOrder, listOrders } from '../../controllers/admin/adminOrderController.js';
+const router = Router();
+router.get('/', listOrders);
+router.get('/:id', getOrder);
+export default router;

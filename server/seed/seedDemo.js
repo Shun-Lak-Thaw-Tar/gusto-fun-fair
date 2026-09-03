@@ -7,6 +7,7 @@ import User from '../src/models/User.js';
 import EventConfig from '../src/models/EventConfig.js';
 import stalls from './data/stalls.js';
 import foodItems from './data/foodItems.js';
+import { findAvailableSlug } from '../src/services/stallService.js';
 
 const assertSafeDatabase = () => {
   if (env.nodeEnv === 'production') throw new Error('Demo seeding is disabled in production');
@@ -19,15 +20,18 @@ try {
   await connectDatabase();
   for (const stallData of stalls) await Stall.findOneAndUpdate({ stallName: stallData.stallName }, stallData, { upsert: true, new: true, runValidators: true });
   const savedStalls = await Stall.find({ stallName: { $in: stalls.map((stall) => stall.stallName) } });
+  for (const stall of savedStalls) {
+    if (!stall.slug) await Stall.collection.updateOne({ _id: stall._id, slug: { $exists: false } }, { $set: { slug: await findAvailableSlug(stall.stallName, stall._id) } });
+  }
   const stallIds = new Map(savedStalls.map((stall) => [stall.stallName, stall._id]));
   for (const { stallName, ...foodData } of foodItems) await FoodItem.findOneAndUpdate({ stallId: stallIds.get(stallName), name: foodData.name }, { ...foodData, stallId: stallIds.get(stallName), image: { url: `/demo/foods/${foodData.name.toLowerCase().replaceAll(' ', '-')}.jpg`, storageKey: '', provider: 'demo-local' } }, { upsert: true, new: true, runValidators: true });
   await FoodItem.updateMany({ reservedTickets: { $exists: false } }, { $set: { reservedTickets: 0 } });
   await FoodItem.updateMany({ soldTickets: { $exists: false } }, { $set: { soldTickets: 0 } });
   const demoEvent = {
-    configKey: 'current', eventName: 'DEMO Fun Fair 2030', eventDate: new Date('2030-02-15T09:00:00+06:30'),
+    configKey: 'current', eventName: 'DEMO Fun Fair 2030', eventDate: new Date('2030-02-15T09:00:00+06:30'), eventTimezone: 'Asia/Yangon',
     preorderOpenAt: new Date('2026-01-01T00:00:00+06:30'), preorderCloseAt: new Date('2030-02-14T09:00:00+06:30'), orderingEnabled: true,
     kbzAccountName: 'DEMO FUN FAIR ACCOUNT', kbzAccountNumber: 'DEMO-000000000', paymentInstructions: 'DEMO ONLY: include the order payment reference in the KBZ payment note.',
-    orderReservationMinutes: 60, paymentProofGraceMinutes: 30,
+    orderReservationMinutes: 60, paymentProofGraceMinutes: 30, featureFlags: { memoriesEnabled: false, eventPageEnabled: false },
   };
   await EventConfig.updateOne({ configKey: 'current' }, { $setOnInsert: demoEvent }, { upsert: true, runValidators: true, timestamps: false });
   const adminName = process.env.SEED_ADMIN_NAME?.trim();

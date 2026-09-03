@@ -10,7 +10,7 @@ Returns `200` with API running status.
 
 ### `GET /api/event` — public
 
-Returns `200` with `eventName`, event and preorder dates, `orderingEnabled`, derived `preorderStatus` (`UPCOMING`, `OPEN`, `CLOSED`, or `DISABLED`), `orderReservationMinutes`, and `paymentProofGraceMinutes`. Payment account details are not returned publicly by this endpoint.
+Returns `200` with `eventName`, event and preorder dates, `eventTimezone` (`Asia/Yangon`), `orderingEnabled`, derived `preorderStatus` (`UPCOMING`, `OPEN`, `CLOSED`, or `DISABLED`), reservation/grace durations, and safe `featureFlags` containing `memoriesEnabled` and `eventPageEnabled`. Payment account details, audit fields, and internal IDs are not returned publicly.
 
 ### `GET /api/stalls` and `GET /api/stalls/:id` — public
 
@@ -84,47 +84,68 @@ Per-food reservation uses an atomic conditional update requiring `reservedTicket
 
 True multi-document ACID guarantees are unavailable on a standalone MongoDB deployment. A replica-set or sharded transaction-capable deployment is required to eliminate every possible process-crash window across multiple food documents and order/payment/ticket side effects.
 
-## Admin System future contract and ownership
+## Admin System contract and ownership
 
-### Implemented Admin endpoints
+All implemented Admin endpoints require the existing JWT plus `role = "admin"`.
 
-All require existing JWT authentication plus `role = "admin"`:
+### Implemented
 
+- `GET /api/admin/dashboard` — returns `{ "dashboard": { ... } }` with frozen dashboard metrics
 - `GET /api/admin/payments` — submitted payments awaiting manual review
 - `PATCH /api/admin/payments/:id/review` — approve/reject through shared `paymentService`
-- `GET /api/admin/statistics/best-selling-stall` — approved-quantity leader; approved revenue breaks quantity ties, and `leaders` returns every exact tie
-- Existing ticket verification/redemption remains implemented at `GET /api/tickets/:code` and `POST /api/tickets/:code/redeem`, also admin-only
+- `GET /api/admin/statistics/best-selling-stall` — approved-quantity leader; approved revenue breaks quantity ties and `leaders` contains every exact tie
+- `GET /api/tickets/:code` and `POST /api/tickets/:code/redeem` — existing Admin-only whole-order ticket lookup/redemption
+
+The dashboard contains `totalOrders`, `awaitingPayment`, `paymentDeclared`, `pendingPaymentReview`, `approvedOrders`, `rejectedOrders`, combined `expiredOrders`, `cancelledOrders`, `approvedRevenue`, `foodTicketsSold`, `digitalTicketsIssued`, `digitalTicketsRedeemed`, `physicalTicketsIssued`, `activeStalls`, and `availableFoodItems`. Revenue and food-ticket quantities count approved orders only. Physical ticket quantities count only orders linked to redeemed digital tickets. Available foods must belong to active stalls.
 
 ### Planned, not implemented
 
-The protected router reserves `/api/admin/dashboard`, `/stalls`, `/foods`, `/orders`, `/tickets`, and `/event`. These subrouters currently expose no business endpoints. They must not be documented or treated as working CRUD APIs.
+No Admin or Stall Owner frontend is implemented. Memories and image-provider integration remain outside this milestone.
 
-Future work reuses the existing authentication and shared services. `pricingService`, `inventoryService`, `orderLifecycleService`, `paymentService`, `ticketService`, and `eventService` are shared business logic; Admin controllers must call them rather than duplicate transitions. `User`, `Stall`, `FoodItem`, `Order`, `Payment`, `Ticket`, `Redemption`, `Notification`, and `EventConfig` are coordinated shared contracts.
+### Implemented Admin management routes
 
-Frozen order states are `AWAITING_PAYMENT`, `PAYMENT_DECLARED`, `PAYMENT_SUBMITTED`, `PAYMENT_APPROVED`, `PAYMENT_REJECTED`, `PAYMENT_EVIDENCE_EXPIRED`, `CANCELLED`, and `EXPIRED`. Frozen inventory states are `RESERVED`, `SOLD`, and `RELEASED`. Admin payment review accepts only `PAYMENT_SUBMITTED + RESERVED` orders and a `SUBMITTED` payment. Statuses change only through real approve/reject/cancel/expiry/redemption actions—never arbitrary status editing.
+- `GET|POST /api/admin/stalls` — list/create stalls
+- `GET|PATCH /api/admin/stalls/:id` — details/edit without changing the stable slug
+- `PATCH /api/admin/stalls/:id/status` — activate/deactivate
+- `GET|POST /api/admin/stalls/:stallId/owner` — view/create the one linked owner
+- `PATCH /api/admin/stalls/:stallId/owner/password` — reset owner password
+- `PATCH /api/admin/stalls/:stallId/owner/status` — enable/disable owner
+- `GET|POST /api/admin/foods` — list/filter/create foods
+- `GET|PATCH /api/admin/foods/:id` — view/edit with atomic `ticketLimit >= reserved + sold`
+- `GET /api/admin/orders?status=...` and `GET /api/admin/orders/:id` — safe listing/filter/details; no arbitrary status endpoint
+- `GET /api/admin/statistics/overview|stalls|foods|best-selling-stall`
+- `GET|PATCH /api/admin/event` — singleton schedule, manual ordering switch, payment settings, and explicit feature flags
+- `GET /api/admin/tickets/:code` and `POST /api/admin/tickets/:code/redeem` — dedicated namespace reusing shared behavior
 
-### Whole-order redemption
+All write bodies are allow-listed and reject unknown fields. Food input never accepts authoritative `preorderPrice`; historical order snapshots are not updated.
 
-One approved multi-item/multi-stall order has one digital ticket. Redeeming it marks the whole order's physical food-ticket quantities as issued. V1 has no partial item redemption, and repeated redemption remains blocked.
+### Implemented Stall Owner routes
 
-### Frozen dashboard/statistics definitions
+All require an active authenticated `stall_owner`; the linked stall comes from the database-backed user identity, never a request stall ID.
 
-- Total Orders: all statuses
-- Awaiting Payment, Payment Declared, Pending Review, Approved, Rejected, and Cancelled: their exact matching statuses
-- Expired Orders: combined `EXPIRED + PAYMENT_EVIDENCE_EXPIRED` (separate cards are also permitted)
-- Approved Revenue: sum approved `Order.totalAmount`
-- Food Tickets Sold: sum item quantities in approved orders
-- Digital Tickets Issued: Ticket records for approved orders
-- Digital Tickets Redeemed: `REDEEMED` Ticket records
-- Physical Tickets Issued: order-item quantities associated with redeemed tickets
+- `GET /api/stall-owner/dashboard` — owner, linked stall, approved-sales summary
+- `GET /api/stall-owner/stall` — linked stall
+- `GET /api/stall-owner/foods` — linked-stall foods with calculated prices/remaining counts
+- `GET /api/stall-owner/sales` — approved-only summary and item breakdown
+- `GET /api/stall-owner/share` — event/stall/food names, slug, and relative public path
 
-Best-Selling Stall means greatest total item quantity in `PAYMENT_APPROVED` orders. Approved stall revenue is the first tie-breaker; return every leader if both remain tied. Stall/food history comes from OrderItem snapshots.
+### Implemented public stall link
 
-### Admin data safety
+`GET /api/stalls/by-slug/:slug` returns an active stall and available foods with server-calculated preorder prices and remaining tickets. Owner accounts and sales are never included.
 
-After orders exist, deactivate stalls (`isActive = false`) and foods (`isAvailable = false`) rather than hard-delete referenced records. A ticket-limit update must enforce `newTicketLimit >= reservedTickets + soldTickets` server-side. Price and discount edits affect future orders only; historical order snapshots are never recalculated.
+Admin controllers must reuse `pricingService`, `inventoryService`, `orderLifecycleService`, `paymentService`, `ticketService`, and `eventService` rather than duplicate transitions. Shared models and lifecycle enums require coordination.
 
-Event settings retain the `current` singleton, 60/30 defaults, `preorderOpenAt < preorderCloseAt`, and closing one day before the event. Updates affect future operations and never rewrite old order/payment/ticket timestamps or amounts. Canonical website notification types are `PAYMENT_APPROVED`, `PAYMENT_REJECTED`, `ORDER_EXPIRED`, and `PAYMENT_EVIDENCE_EXPIRED`.
+Frozen order states remain `AWAITING_PAYMENT`, `PAYMENT_DECLARED`, `PAYMENT_SUBMITTED`, `PAYMENT_APPROVED`, `PAYMENT_REJECTED`, `PAYMENT_EVIDENCE_EXPIRED`, `CANCELLED`, and `EXPIRED`; inventory states remain `RESERVED`, `SOLD`, and `RELEASED`. Statuses change only through valid lifecycle actions, never arbitrary editing.
+
+One approved multi-item/multi-stall order has one digital ticket. Redeeming it represents issuance of every physical food-ticket quantity in that order. Partial redemption is not supported and repeat redemption remains blocked.
+
+Best-Selling Stall means greatest total item quantity in `PAYMENT_APPROVED` orders. Approved stall revenue is the first tie-breaker; every leader is returned when quantity and revenue remain tied. The compatibility response is `{ stall, leaders, isTie }`.
+
+After orders exist, deactivate stalls (`isActive = false`) and foods (`isAvailable = false`) instead of hard-deleting referenced data. Ticket-limit updates must enforce `newTicketLimit >= reservedTickets + soldTickets`. Price and discount edits affect future orders only; historical order snapshots are never recalculated.
+
+Event settings retain the `current` singleton, `Asia/Yangon` timezone, and 60/30 defaults. Validation requires `preorderOpenAt < preorderCloseAt < eventDate`; there is no exact 24-hour constraint. Ordering is allowed only inside the schedule while `orderingEnabled` is true. `featureFlags.memoriesEnabled` and `featureFlags.eventPageEnabled` are independently patchable, default false, preserve omitted siblings, and reject unknown keys. Payment review/approval/rejection and ticket redemption have no EventConfig switch. Updates affect future operations and never rewrite historical orders. Canonical notification types are `PAYMENT_APPROVED`, `PAYMENT_REJECTED`, `ORDER_EXPIRED`, and `PAYMENT_EVIDENCE_EXPIRED`.
+
+Admin clients should show confirmation dialogs before changing operational switches, but the API requires no confirmation flag. Confirmed launch dates are 8 September 2026 opening, 10 September 2026 closing, and 11 September 2026 event date in Myanmar Time; exact opening/closing times remain TBD. Two more explicit event-day flags are expected later, with names and behavior not yet defined.
 
 ## Customer-facing wording for the future frontend
 
