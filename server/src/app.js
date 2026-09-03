@@ -14,6 +14,7 @@ import ticketRoutes from './routes/ticketRoutes.js';
 import stallOwnerRoutes from './routes/stallOwner/index.js';
 import { errorHandler } from './middleware/errorMiddleware.js';
 import { notFound } from './middleware/notFoundMiddleware.js';
+import crushLetterRoutes from './routes/crushLetterRoutes.js';
 
 const app = express();
 app.disable('x-powered-by');
@@ -29,6 +30,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/memories', memoryRoutes);
+app.use('/api/crush-letters', crushLetterRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/stall-owner', stallOwnerRoutes);
 app.use(notFound);
