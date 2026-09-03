@@ -1,6 +1,6 @@
 # Admin System Specification (Future Work)
 
-This document freezes the contract for the future Admin System. It does not claim that the full Admin API or UI is implemented.
+This document describes the implemented V1.3 Admin backend and the future Admin UI. No Admin frontend is implemented yet.
 
 ## Security and module boundary
 
@@ -10,14 +10,14 @@ The Admin developer must reuse shared `pricingService`, `inventoryService`, `ord
 
 ## Planned modules
 
-- Dashboard: frozen metrics below
-- Stall Management: create/edit/deactivate; no normal hard deletion after orders exist
-- Food Management: create/edit/deactivate and safe ticket-limit validation
-- Order Management: inspect/filter only; no arbitrary status dropdown
+- Dashboard: implemented backend metrics endpoint
+- Stall Management: implemented create/edit/deactivate, details/sales, and owner-account management; no hard-delete route
+- Food Management: implemented create/edit/deactivate and atomic ticket-limit validation
+- Order Management: implemented inspect/filter only; no arbitrary status endpoint
 - Pending Payment Management and Payment Review: call the existing shared review lifecycle
-- Ticket Verification and Redemption: whole-order lookup/redemption
-- Statistics: approved sales per stall/food and best-selling leaders
-- Event Settings: safely update the singleton current EventConfig
+- Ticket Verification and Redemption: implemented whole-order lookup/redemption in shared and Admin namespaces
+- Statistics: implemented overview, approved sales per stall/food, and best-selling leaders
+- Event Settings: implemented safe singleton reads/updates
 
 Event memories and all customer/admin frontend pages are excluded. Images and proofs retain provider-neutral `{ url, storageKey, provider }` references; no provider is selected.
 
@@ -39,13 +39,15 @@ One approved order receives one digital ticket even when it contains several foo
 - Pending Payment Review: `PAYMENT_SUBMITTED`
 - Approved Orders: `PAYMENT_APPROVED`
 - Rejected Orders: `PAYMENT_REJECTED`
-- Expired Orders: combined `EXPIRED + PAYMENT_EVIDENCE_EXPIRED`; implementations may also show separate cards
+- Expired Orders: combined `EXPIRED + PAYMENT_EVIDENCE_EXPIRED`
 - Cancelled Orders: `CANCELLED`
 - Approved Revenue: sum `Order.totalAmount` only for approved orders
 - Food Tickets Sold: sum all item quantities only in approved orders
-- Digital Tickets Issued: number of Ticket records generated for approved orders
+- Digital Tickets Issued: number of Ticket records
 - Digital Tickets Redeemed: Ticket records with `status = REDEEMED`
-- Physical Tickets Issued: sum associated order-item quantities for redeemed digital tickets
+- Physical Tickets Issued: sum associated order quantities for redeemed tickets
+- Active Stalls: `isActive = true`
+- Available Food Items: available foods belonging to active stalls
 
 Digital ticket count and physical food-ticket quantity are different metrics.
 
@@ -61,13 +63,19 @@ Food ticket limits must satisfy `newTicketLimit >= reservedTickets + soldTickets
 
 ## Event settings
 
-Keep the singleton `configKey = "current"`. Future settings may update event name/date, preorder opening, KBZ information, instructions, and ordering enabled. Enforce `preorderOpenAt < preorderCloseAt` and the project rule `preorderCloseAt = one day before eventDate`. Reservation/grace defaults remain 60/30 minutes unless deliberately configured.
+Keep the singleton `configKey = "current"` and explicit `eventTimezone = "Asia/Yangon"`. Admin may update event name/date, preorder opening/closing timestamps, KBZ information, instructions, reservation/grace durations, `orderingEnabled`, and the approved nested feature flags. Enforce `preorderOpenAt < preorderCloseAt < eventDate`; closing is not required to be exactly 24 hours before the event. New orders require both the scheduled window and the manual `orderingEnabled` switch.
+
+Current independent event-day controls are `featureFlags.memoriesEnabled` and `featureFlags.eventPageEnabled`, both defaulting to `false`. Partial flag updates preserve other flag values, and unknown flag names are rejected. Two more explicit flags may be added to the schema and validation later when their requirements are known; arbitrary client-defined flags are not accepted. Payment review/approval/rejection and ticket redemption have no feature switch and remain available under their existing authorization and lifecycle rules.
+
+The future Admin interface must confirm consequential switch changes before sending the validated update. Confirmation is a frontend safeguard; the API does not accept or require a `confirmed` field.
+
+Launch dates are confirmed as preorder opening on 8 September 2026, preorder closing on 10 September 2026, and the event on 11 September 2026 in Myanmar Time. Exact opening and closing times remain TBD and must not be guessed or written into development configuration.
 
 Event changes never alter old totals, deadlines, declaration/proof timestamps, payments, tickets, or redemptions. `DEMO Fun Fair 2030` and all demo KBZ/event values must be replaced and verified before production launch.
 
 ## Canonical website notifications
 
-Use `PAYMENT_APPROVED`, `PAYMENT_REJECTED`, `ORDER_EXPIRED`, and `PAYMENT_EVIDENCE_EXPIRED`. Rejection can include its reason; expiry notifications explain that reserved food tickets were released. Website notifications only—no SMS, email, or push integration.
+Use `PAYMENT_APPROVED`, `PAYMENT_REJECTED`, `ORDER_EXPIRED`, and `PAYMENT_EVIDENCE_EXPIRED`. Website notifications only—no SMS, email, or push integration.
 
 ## Production data readiness
 

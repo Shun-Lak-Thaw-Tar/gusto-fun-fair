@@ -35,3 +35,5 @@ Thumbs.db
 
 # MongoDB local data
 data/
+!server/seed/data/
+!server/seed/data/*.js

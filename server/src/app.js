@@ -11,6 +11,7 @@ import orderRoutes from './routes/orderRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import stallRoutes from './routes/stallRoutes.js';
 import ticketRoutes from './routes/ticketRoutes.js';
+import stallOwnerRoutes from './routes/stallOwner/index.js';
 import { errorHandler } from './middleware/errorMiddleware.js';
 import { notFound } from './middleware/notFoundMiddleware.js';
 
@@ -29,6 +30,7 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/memories', memoryRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/stall-owner', stallOwnerRoutes);
 app.use(notFound);
 app.use(errorHandler);
 export default app;

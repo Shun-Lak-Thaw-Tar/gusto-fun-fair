@@ -19,9 +19,10 @@ The default local database is `mongodb://127.0.0.1:27017/funfair`. The seed is i
 - `src/models`: MongoDB schemas and validation
 - `src/controllers`: HTTP request handling
 - `src/controllers/admin`: isolated Admin developer controller boundary
-- `src/services`: event rules, order lifecycle, pricing, ticket, payment, inventory, and media boundaries
+- `src/services`: event rules, order lifecycle, pricing, ticket, payment, inventory, shared sales, stall, and media boundaries
 - `src/routes`: REST route composition
 - `src/routes/admin`: one protected admin entry router with module-specific subrouters
+- `src/routes/stallOwner`: one protected, stall-linked owner entry router
 - `src/middleware`: authentication, authorization, errors, and 404 handling
 - `seed`: development/demo catalog data and safe upsert script
 - `test`: focused unit tests for pricing and ticket-code generation
@@ -48,13 +49,17 @@ Expired undeclared orders become `EXPIRED`; declared orders without timely proof
 
 See [docs/API_CONTRACT.md](docs/API_CONTRACT.md) for request/response contracts and the complete lifecycle.
 
-Parallel ownership and shared-logic rules are defined in [docs/TEAM_OWNERSHIP.md](docs/TEAM_OWNERSHIP.md). The future Admin System contract is defined in [docs/ADMIN_SYSTEM_SPEC.md](docs/ADMIN_SYSTEM_SPEC.md). The full Admin System is not implemented in V1.2; the folders are safe extension boundaries.
+Parallel ownership and shared-logic rules are defined in [docs/TEAM_OWNERSHIP.md](docs/TEAM_OWNERSHIP.md). The Admin roadmap is defined in [docs/ADMIN_SYSTEM_SPEC.md](docs/ADMIN_SYSTEM_SPEC.md). The dashboard and existing payment/statistics routes are implemented; remaining Admin modules are safe future extension boundaries.
+
+Backend V1.3 implements Admin stall/food/order/statistics/event/ticket management and Admin-controlled Stall Owner accounts. Stall Owners use the existing login, are linked to exactly one stall, and receive read-only private dashboard, stall, food, approved-sales, and share-card APIs. Backend V1.3.1 adds independent event schedule and feature controls. See [docs/STALL_OWNER_SYSTEM_SPEC.md](docs/STALL_OWNER_SYSTEM_SPEC.md).
 
 ## Intentional V1 boundaries
 
 Stall, food, and current-event records are demo data because final information is not available. MongoDB supports a dynamic number of stalls and foods, so real records can replace them without schema changes. Payment verification is manual KBZ verification; there is no gateway or refund integration. The media service intentionally has no selected provider and models store provider-neutral references. Website notifications are stored only in MongoDB; no external notification service is integrated.
 
-Event configuration uses a unique `configKey: "current"` singleton. It stores ordering windows, reservation/grace durations, and KBZ instructions. The model enforces that pre-orders close at least one day before the event, and order creation enforces the enabled/open window server-side.
+Event configuration uses a unique `configKey: "current"` singleton and `eventTimezone: "Asia/Yangon"`. New orders require both `orderingEnabled` and `preorderOpenAt <= now < preorderCloseAt`; the manual switch never overrides the authoritative schedule. Validation requires opening before closing and closing before the event, without an exact 24-hour rule. Independent `featureFlags.memoriesEnabled` and `featureFlags.eventPageEnabled` default to `false`. Payment review/approval/rejection and ticket redemption intentionally have no feature switches.
+
+Launch preparation confirms preorder dates of 8 September 2026 through 10 September 2026 and an event date of 11 September 2026 in Myanmar Time. Exact opening and closing times remain unconfirmed and must be entered by an Admin when known; development data must not guess them. Two additional event-day controls are expected later, but their names and rules must be added explicitly only after requirements are confirmed.
 
 **Production readiness:** `DEMO Fun Fair 2030`, demo KBZ details, demo stalls, and demo foods must be replaced and verified before real pre-order sales open. Once customer orders exist, deactivate referenced stalls/foods instead of hard-deleting them.
 

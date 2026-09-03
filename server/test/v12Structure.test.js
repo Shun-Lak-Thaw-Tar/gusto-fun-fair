@@ -21,16 +21,35 @@ test('application and protected admin structure load without route errors', asyn
   assert.equal(implemented.status, 401);
 });
 
-test('best-selling response returns every exact tied leader', async (t) => {
+const runStatistics = async (results) => {
   const originalAggregate = Order.aggregate;
-  t.after(() => { Order.aggregate = originalAggregate; });
-  Order.aggregate = async () => [
+  Order.aggregate = async () => results;
+  try {
+    let body;
+    await bestSellingStall({}, { json(value) { body = value; } });
+    return body;
+  } finally { Order.aggregate = originalAggregate; }
+};
+
+test('best-selling stall ranks higher quantity first', async () => {
+  const body = await runStatistics([{ stallName: 'A', quantitySold: 12, revenue: 12000 }, { stallName: 'B', quantitySold: 10, revenue: 50000 }]);
+  assert.equal(body.stall.stallName, 'A');
+  assert.deepEqual(body.leaders.map((leader) => leader.stallName), ['A']);
+  assert.equal(body.isTie, false);
+});
+
+test('best-selling stall uses approved revenue as quantity tie-breaker', async () => {
+  const body = await runStatistics([{ stallName: 'B', quantitySold: 10, revenue: 30000 }, { stallName: 'A', quantitySold: 10, revenue: 20000 }]);
+  assert.equal(body.stall.stallName, 'B');
+  assert.equal(body.isTie, false);
+});
+
+test('best-selling response returns every exact tied leader', async () => {
+  const body = await runStatistics([
     { _id: 'a', stallName: 'A', quantitySold: 10, revenue: 20000 },
     { _id: 'b', stallName: 'B', quantitySold: 10, revenue: 20000 },
     { _id: 'c', stallName: 'C', quantitySold: 9, revenue: 30000 },
-  ];
-  let body;
-  await bestSellingStall({}, { json(value) { body = value; } });
+  ]);
   assert.equal(body.stall.stallName, 'A');
   assert.deepEqual(body.leaders.map((leader) => leader.stallName), ['A', 'B']);
   assert.equal(body.isTie, true);
