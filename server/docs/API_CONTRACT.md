@@ -1,6 +1,6 @@
-# Fun Fair Backend V1.1 API Contract
+# Fun Fair Backend API Contract
 
-All JSON errors use `{ "error": { "message": "..." } }`. Protected endpoints require `Authorization: Bearer <JWT>`. IDs below are MongoDB IDs. Payment proof objects remain provider-neutral: `{ "url": "...", "storageKey": "...", "provider": "..." }`.
+All JSON errors use `{ "error": { "message": "..." } }`. Protected endpoints require `Authorization: Bearer <JWT>`. IDs below are MongoDB IDs. Uploads now require multipart image bytes. See [the media API report](MEDIA_BACKEND_REPORT.md) for the full upload/gallery contract.
 
 ## Event and catalog
 
@@ -48,29 +48,27 @@ Declaration means the customer reports that external KBZ payment occurred. Cance
 
 Body: none. Allowed only for `AWAITING_PAYMENT + RESERVED`. Returns `200` with `CANCELLED + RELEASED`; all held quantities are returned. Important errors: `404` not found/not owned, `409` invalid state or repeat request. It is forbidden after declaration, proof submission, approval, rejection, or either expiry state.
 
-## Payment proof and review
+## Payment proof, gallery, and review
 
-### `POST /api/payments/orders/:orderId` — authenticated owner
+See [MEDIA_BACKEND_REPORT.md](MEDIA_BACKEND_REPORT.md#api-contract) for the complete request/response contract.
 
-Request:
-
-```json
-{ "paymentProof": { "url": "/provider-neutral/reference.jpg", "storageKey": "", "provider": "" } }
-```
-
-Requires `PAYMENT_DECLARED + RESERVED` before `paymentProofExpiresAt`. Returns `201` with the payment and `PAYMENT_SUBMITTED + RESERVED` order. Submitted orders do not expire while awaiting admin review. Important errors: `400` missing proof reference, `404` not found/not owned, `409` invalid state, `410` grace period expired (which transitions to `PAYMENT_EVIDENCE_EXPIRED + RELEASED`).
-
-### `GET /api/admin/payments` — admin
-
-Returns submitted payments awaiting manual review.
-
-### `PATCH /api/admin/payments/:id/review` — admin
-
-Approval request: `{ "decision": "APPROVED" }`. Rejection request: `{ "decision": "REJECTED", "rejectionReason": "..." }`.
-
-Only `Payment.SUBMITTED` with `Order.PAYMENT_SUBMITTED + RESERVED` is reviewable. Approval changes payment to `APPROVED`, order to `PAYMENT_APPROVED + SOLD`, converts reserved counters to sold, and idempotently creates exactly one digital ticket and notification. Rejection changes payment to `REJECTED`, order to `PAYMENT_REJECTED + RELEASED`, releases inventory, creates no ticket, and records reviewer/time/reason. Repeated same-decision calls do not repeat inventory or ticket effects; opposite decisions return `409`. Non-admin callers receive `403`.
-
-Payment rejection means proof was not accepted. It does not automatically issue a refund. There are no refund endpoints or refund processing in V1.1.
+- `POST /api/payments/orders/:orderId`: authenticated owner sends multipart field `image`, not a JSON URL. JPEG, PNG, or WebP, at most 7 MB.
+- Initial proof requires `PAYMENT_DECLARED + RESERVED` before `paymentProofExpiresAt`. Admin-granted replacement requires `PAYMENT_REUPLOAD_REQUESTED + RESERVED`, without a deadline.
+- Each granted replacement accepts one upload and returns to `PAYMENT_SUBMITTED`. Earlier screenshots remain privately accessible.
+- `GET /api/payments/orders/:orderId`: owner retrieves payment status, reason, proof versions, and review history.
+- `GET /api/payments/:id/proofs/:version`: image bytes, accessible only to owner/admin.
+- `GET /api/admin/payments`: submitted and replacement-requested payments.
+- `PATCH /api/admin/payments/:id/review`: requires `decision` and the current numeric `proofVersion`. Decisions are `APPROVED`, `REJECTED`, or `REUPLOAD_REQUESTED`. Rejection/reupload require `reason` (maximum 500 characters); `rejectionReason` remains an alias.
+- Stale proofVersion returns 409. Final rejection may also close a pending replacement request. Approval requires a submitted proof.
+- Approval transactionally sells reserved stock and creates one ticket/notification. Final rejection releases stock without a refund. Reupload keeps quantities reserved and stores the required reason.
+- `GET /api/memories`: public gallery with cursor pagination.
+- `POST /api/memories`: authenticated multipart image and optional caption; one per event, or two total with an approved event order.
+- `GET /api/memories/window`, `GET /api/memories/allowance`, `GET /api/memories/mine`: window and authenticated user context.
+- `GET /api/memories/:id/image`: public active image.
+- `DELETE /api/memories/:id`: owner deletion within the window frees a slot.
+- `GET|PUT /api/memories/:id/reaction`: authenticated reaction lookup/update; body `{ "reaction": "LIKE" }`, `"DISLIKE"`, or null.
+- `GET|PUT /api/admin/memories/window`: admin reads/sets opening and closing instants.
+- `DELETE /api/admin/memories/:id`: admin removal keeps the slot occupied.
 
 ## Expiry and inventory lifecycle
 
@@ -78,11 +76,11 @@ Business-sensitive operations run idempotent cleanup:
 
 - `AWAITING_PAYMENT + RESERVED` at/after `reservationExpiresAt` becomes `EXPIRED + RELEASED`.
 - `PAYMENT_DECLARED + RESERVED` at/after `paymentProofExpiresAt` becomes `PAYMENT_EVIDENCE_EXPIRED + RELEASED`.
-- `PAYMENT_SUBMITTED` is excluded from timer cleanup.
+- `PAYMENT_SUBMITTED` and `PAYMENT_REUPLOAD_REQUESTED` are excluded from timer cleanup.
 
 Per-food reservation uses an atomic conditional update requiring `reservedTickets + soldTickets + requestedQuantity <= ticketLimit`. For multi-item orders, reservations run deterministically and earlier successful holds are explicitly compensated if a later item fails. Release and reserved-to-sold conversion also compensate earlier items when a later item operation fails. Repeated lifecycle transitions first conditionally claim the order state, preventing normal double-release/double-sale behavior.
 
-True multi-document ACID guarantees are unavailable on a standalone MongoDB deployment. A replica-set or sharded transaction-capable deployment is required to eliminate every possible process-crash window across multiple food documents and order/payment/ticket side effects.
+A replica set or sharded deployment is required and checked on startup. Payment review and new media operations use transactions. Existing order creation, cancellation, declaration, and expiry retain their conditional-update/compensation behavior.
 
 ## Admin System future contract and ownership
 
@@ -91,7 +89,7 @@ True multi-document ACID guarantees are unavailable on a standalone MongoDB depl
 All require existing JWT authentication plus `role = "admin"`:
 
 - `GET /api/admin/payments` — submitted payments awaiting manual review
-- `PATCH /api/admin/payments/:id/review` — approve/reject through shared `paymentService`
+- `PATCH /api/admin/payments/:id/review` — approve/request replacement/reject through shared `paymentService`
 - `GET /api/admin/statistics/best-selling-stall` — approved-quantity leader; approved revenue breaks quantity ties, and `leaders` returns every exact tie
 - Existing ticket verification/redemption remains implemented at `GET /api/tickets/:code` and `POST /api/tickets/:code/redeem`, also admin-only
 
@@ -101,7 +99,7 @@ The protected router reserves `/api/admin/dashboard`, `/stalls`, `/foods`, `/ord
 
 Future work reuses the existing authentication and shared services. `pricingService`, `inventoryService`, `orderLifecycleService`, `paymentService`, `ticketService`, and `eventService` are shared business logic; Admin controllers must call them rather than duplicate transitions. `User`, `Stall`, `FoodItem`, `Order`, `Payment`, `Ticket`, `Redemption`, `Notification`, and `EventConfig` are coordinated shared contracts.
 
-Frozen order states are `AWAITING_PAYMENT`, `PAYMENT_DECLARED`, `PAYMENT_SUBMITTED`, `PAYMENT_APPROVED`, `PAYMENT_REJECTED`, `PAYMENT_EVIDENCE_EXPIRED`, `CANCELLED`, and `EXPIRED`. Frozen inventory states are `RESERVED`, `SOLD`, and `RELEASED`. Admin payment review accepts only `PAYMENT_SUBMITTED + RESERVED` orders and a `SUBMITTED` payment. Statuses change only through real approve/reject/cancel/expiry/redemption actions—never arbitrary status editing.
+Frozen order states are `AWAITING_PAYMENT`, `PAYMENT_DECLARED`, `PAYMENT_SUBMITTED`, `PAYMENT_REUPLOAD_REQUESTED`, `PAYMENT_APPROVED`, `PAYMENT_REJECTED`, `PAYMENT_EVIDENCE_EXPIRED`, `CANCELLED`, and `EXPIRED`. Frozen inventory states are `RESERVED`, `SOLD`, and `RELEASED`. Approval or a replacement request requires a submitted payment; final rejection also accepts a replacement-requested payment. All reviews require the current proofVersion. Statuses change only through real approve/reject/cancel/expiry/redemption actions—never arbitrary status editing.
 
 ### Whole-order redemption
 
@@ -124,7 +122,7 @@ Best-Selling Stall means greatest total item quantity in `PAYMENT_APPROVED` orde
 
 After orders exist, deactivate stalls (`isActive = false`) and foods (`isAvailable = false`) rather than hard-delete referenced records. A ticket-limit update must enforce `newTicketLimit >= reservedTickets + soldTickets` server-side. Price and discount edits affect future orders only; historical order snapshots are never recalculated.
 
-Event settings retain the `current` singleton, 60/30 defaults, `preorderOpenAt < preorderCloseAt`, and closing one day before the event. Updates affect future operations and never rewrite old order/payment/ticket timestamps or amounts. Canonical website notification types are `PAYMENT_APPROVED`, `PAYMENT_REJECTED`, `ORDER_EXPIRED`, and `PAYMENT_EVIDENCE_EXPIRED`.
+Event settings retain the `current` singleton, 60/30 defaults, `preorderOpenAt < preorderCloseAt`, and closing one day before the event. Updates affect future operations and never rewrite old order/payment/ticket timestamps or amounts. Canonical website notification types are `PAYMENT_APPROVED`, `PAYMENT_REJECTED`, `PAYMENT_REUPLOAD_REQUESTED`, `ORDER_EXPIRED`, and `PAYMENT_EVIDENCE_EXPIRED`.
 
 ## Customer-facing wording for the future frontend
 

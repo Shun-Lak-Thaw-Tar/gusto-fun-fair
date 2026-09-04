@@ -1,7 +1,8 @@
 import mongoose from 'mongoose';
 import env from '../config/env.js';
 
-export const errorHandler = (error, _req, res, _next) => {
+export const errorHandler = (error, _req, res, next) => {
+  if (res.headersSent) return next(error);
   let status = error.statusCode || 500;
   let message = error.message || 'Internal server error';
   if (error instanceof mongoose.Error.ValidationError) { status = 400; message = 'Validation failed'; }

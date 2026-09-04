@@ -55,3 +55,16 @@ export const revertSoldToReserved = async (items) => Promise.all(items.map((item
   { _id: item.foodItemId, soldTickets: { $gte: item.quantity } },
   { $inc: { reservedTickets: item.quantity, soldTickets: -item.quantity } },
 )));
+
+// Payment review settles all foods inside the caller's MongoDB transaction.
+export const settleReservedInventory = async (items, approved, session) => {
+  if (!session) throw new Error('Payment settlement requires a database transaction');
+  for (const item of items) {
+    const result = await FoodItem.updateOne(
+      { _id: item.foodItemId, reservedTickets: { $gte: item.quantity } },
+      { $inc: { reservedTickets: -item.quantity, ...(approved ? { soldTickets: item.quantity } : {}) } },
+      { session },
+    );
+    if (result.modifiedCount !== 1) throw new ApiError(409, 'Reserved inventory changed; payment review could not complete');
+  }
+};

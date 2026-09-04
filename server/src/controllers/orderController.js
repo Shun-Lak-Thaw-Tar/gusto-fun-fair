@@ -23,7 +23,7 @@ export const createOrder = async (req, res) => {
   await reserveInventory(items);
   try {
     const now = new Date();
-    const order = await Order.create({ userId: req.user._id, items, totalQuantity: items.reduce((sum, item) => sum + item.quantity, 0), totalAmount: items.reduce((sum, item) => sum + item.subtotal, 0), paymentReference: generatePaymentReference(), reservationExpiresAt: new Date(now.getTime() + config.orderReservationMinutes * 60_000) });
+    const order = await Order.create({ eventId: config._id, userId: req.user._id, items, totalQuantity: items.reduce((sum, item) => sum + item.quantity, 0), totalAmount: items.reduce((sum, item) => sum + item.subtotal, 0), paymentReference: generatePaymentReference(), reservationExpiresAt: new Date(now.getTime() + config.orderReservationMinutes * 60_000) });
     res.status(201).json({ order, payment: { amount: order.totalAmount, reference: order.paymentReference, reservationExpiresAt: order.reservationExpiresAt, ...presentEvent(config, now, true) } });
   } catch (error) {
     await releaseInventory(items);

@@ -10,8 +10,11 @@ import stallRoutes from './stallRoutes.js';
 import statisticsRoutes from './statisticsRoutes.js';
 import ticketRoutes from './ticketRoutes.js';
 
+import memoryRoutes from './memoryRoutes.js';
+
 const router = Router();
 router.use(requireAuth, requireAdmin);
+router.use('/memories', memoryRoutes);
 router.use('/dashboard', dashboardRoutes);
 router.use('/stalls', stallRoutes);
 router.use('/foods', foodRoutes);
