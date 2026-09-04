@@ -10,7 +10,8 @@ import EventConfig from '../src/models/EventConfig.js';
 import User from '../src/models/User.js';
 import Order from '../src/models/Order.js';
 import Payment from '../src/models/Payment.js';
-import FoodItem from '../src/models/FoodItem.js';
+import Food from '../src/models/Food.js';
+import StallFood from '../src/models/StallFood.js';
 import Stall from '../src/models/Stall.js';
 import Ticket from '../src/models/Ticket.js';
 import Memory from '../src/models/Memory.js';
@@ -62,12 +63,13 @@ test('media and payment HTTP integration', { timeout: 120_000 }, async (t) => {
   const now = Date.now();
   const event = await EventConfig.create({ eventName: 'Media test', eventDate: new Date(now + 10 * 86400_000), preorderOpenAt: new Date(now - 86400_000), preorderCloseAt: new Date(now + 8 * 86400_000), orderingEnabled: true });
   const stall = await Stall.create({ stallName: 'Test Stall', batch: 'A', discount: { type: 'fixed', value: 0 } });
-  const food = await FoodItem.create({ stallId: stall._id, name: 'Rice', eventDayPrice: 1000, ticketLimit: 100, reservedTickets: 0, soldTickets: 0 });
+  const genericFood = await Food.create({ name: 'Rice' });
+  const food = await StallFood.create({ stallId: stall._id, foodId: genericFood._id, eventDayPrice: 1000, ticketLimit: 100, reservedTickets: 0, soldTickets: 0 });
   let orderNumber = 0;
   const makeOrder = async (user, status = 'PAYMENT_DECLARED', eventId = event._id) => {
     const approved = status === 'PAYMENT_APPROVED';
-    if (!approved) await FoodItem.updateOne({ _id: food._id }, { $inc: { reservedTickets: 2 } });
-    return Order.create({ userId: users[user]._id, eventId, status, inventoryStatus: approved ? 'SOLD' : 'RESERVED', items: [{ stallId: stall._id, foodItemId: food._id, stallName: 'Test Stall', foodName: 'Rice', quantity: 2, unitPrice: 1000, subtotal: 2000 }], totalQuantity: 2, totalAmount: 2000, paymentReference: `FF-MEDIA-${++orderNumber}`, reservationExpiresAt: new Date(now + 60_000), paymentProofExpiresAt: new Date(now + 60_000) });
+    if (!approved) await StallFood.updateOne({ _id: food._id }, { $inc: { reservedTickets: 2 } });
+    return Order.create({ userId: users[user]._id, eventId, status, inventoryStatus: approved ? 'SOLD' : 'RESERVED', items: [{ stallId: stall._id, stallFoodId: food._id, stallName: 'Test Stall', foodName: 'Rice', quantity: 2, unitPrice: 1000, subtotal: 2000 }], totalQuantity: 2, totalAmount: 2000, paymentReference: `FF-MEDIA-${++orderNumber}`, reservationExpiresAt: new Date(now + 60_000), paymentProofExpiresAt: new Date(now + 60_000) });
   };
   const openWindow = { opensAt: new Date(now - 60_000).toISOString(), closesAt: new Date(now + 3600_000).toISOString() };
   let ownerPhoto, buyerPhoto;
@@ -187,11 +189,11 @@ test('media and payment HTTP integration', { timeout: 120_000 }, async (t) => {
     expectStatus(await request(reviewPath(), { user: 'other', method: 'PATCH', json: { decision: 'REUPLOAD_REQUESTED', reason: 'Wrong', proofVersion: 1 } }), 403);
     expectStatus(await request(reviewPath(), { user: 'admin', method: 'PATCH', json: { decision: 'REUPLOAD_REQUESTED', proofVersion: 1 } }), 400);
     expectStatus(await review('REUPLOAD_REQUESTED', 'Wrong', 0), 409);
-    const before = await FoodItem.findById(food._id);
+    const before = await StallFood.findById(food._id);
     payment = expectStatus(await review('REUPLOAD_REQUESTED'), 200).payment;
     assert.equal(payment.canReupload, true);
     assert.equal(payment.reuploadReason, 'Wrong screenshot');
-    const after = await FoodItem.findById(food._id);
+    const after = await StallFood.findById(food._id);
     assert.equal(after.reservedTickets, before.reservedTickets);
     assert.equal(after.soldTickets, before.soldTickets);
     expectStatus(await review('APPROVED'), 409);
@@ -217,10 +219,10 @@ test('media and payment HTTP integration', { timeout: 120_000 }, async (t) => {
     assert.equal(expectStatus(await request(proofPath, { user: 'other' }), 200).payment.proofVersion, 3);
   });
   await t.test('approval alone sells stock, unlocks second snap and issues exactly one ticket', async () => {
-    const before = await FoodItem.findById(food._id);
+    const before = await StallFood.findById(food._id);
     payment = expectStatus(await review('APPROVED', ''), 200).payment;
     expectStatus(await review('APPROVED', ''), 200);
-    const after = await FoodItem.findById(food._id);
+    const after = await StallFood.findById(food._id);
     assert.equal(after.reservedTickets, before.reservedTickets - 2);
     assert.equal(after.soldTickets, before.soldTickets + 2);
     assert.equal(await Ticket.countDocuments({ orderId: order._id }), 1);
@@ -237,9 +239,9 @@ test('media and payment HTTP integration', { timeout: 120_000 }, async (t) => {
     assert.equal(await Ticket.countDocuments({ orderId: pending._id }), 0);
     await Order.updateOne({ _id: pending._id }, { 'items.0.quantity': 2 });
     expectStatus(await request(`/admin/payments/${submitted.id}/review`, { user: 'admin', method: 'PATCH', json: { decision: 'REUPLOAD_REQUESTED', proofVersion: 1, reason: 'Need correct receipt' } }), 200);
-    const before = await FoodItem.findById(food._id);
+    const before = await StallFood.findById(food._id);
     expectStatus(await request(`/admin/payments/${submitted.id}/review`, { user: 'admin', method: 'PATCH', json: { decision: 'REJECTED', proofVersion: 1, reason: 'Payment invalid' } }), 200);
-    assert.equal((await FoodItem.findById(food._id)).reservedTickets, before.reservedTickets - 2);
+    assert.equal((await StallFood.findById(food._id)).reservedTickets, before.reservedTickets - 2);
   });
   await t.test('first-submission deadline still applies', async () => {
     const expired = await makeOrder('race');
