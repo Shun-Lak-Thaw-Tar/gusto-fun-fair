@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import mongoose from 'mongoose';
+import sharp from 'sharp';
+import { mediaStorage } from '../src/services/mediaService.js';
 import EventConfig from '../src/models/EventConfig.js';
 import Food from '../src/models/Food.js';
 import StallFood from '../src/models/StallFood.js';
@@ -17,7 +19,7 @@ import { reviewPayment } from '../src/services/paymentService.js';
 import { createOrder } from '../src/controllers/orderController.js';
 import { submitPayment } from '../src/controllers/paymentController.js';
 
-const uri = 'mongodb://127.0.0.1:27017/funfair_v11_test';
+const uri = process.env.TEST_MONGODB_URI;
 const ids = {
   stallA: new mongoose.Types.ObjectId('700000000000000000000001'), stallB: new mongoose.Types.ObjectId('700000000000000000000002'),
   foodA: new mongoose.Types.ObjectId('710000000000000000000001'), foodB: new mongoose.Types.ObjectId('710000000000000000000002'), foodC: new mongoose.Types.ObjectId('710000000000000000000003'),
@@ -27,8 +29,12 @@ const response = () => ({ statusCode: 200, body: undefined, status(code) { this.
 const expectStatus = async (promise, statusCode) => assert.rejects(promise, (error) => error.statusCode === statusCode);
 
 test('Backend V1.1 lifecycle', async (t) => {
-  await mongoose.connect(uri);
-  await mongoose.connection.dropDatabase();
+  if (!uri) throw new Error('Run npm test to use the isolated test database');
+  await mongoose.connect(uri, { dbName: `funfair_v11_test_${process.pid}` });
+  t.after(async () => { await mongoose.connection.dropDatabase(); await mongoose.disconnect(); });
+  await Promise.all(Object.values(mongoose.models).map(model => model.init()));
+  t.mock.method(mediaStorage, 'put', async () => {});
+  const file = { buffer: await sharp({ create: { width: 2, height: 2, channels: 3, background: 'red' } }).png().toBuffer(), mimetype: 'image/png' };
   const now = new Date();
   await EventConfig.create({ configKey: 'current', eventName: 'Test Event', eventDate: new Date(now.getTime() + 10 * 86_400_000), preorderOpenAt: new Date(now.getTime() - 86_400_000), preorderCloseAt: new Date(now.getTime() + 9 * 86_400_000), orderingEnabled: true, orderReservationMinutes: 60, paymentProofGraceMinutes: 30, kbzAccountName: 'Test', kbzAccountNumber: '000', paymentInstructions: 'Test only' });
   await Stall.create([{ _id: ids.stallA, stallName: 'A', batch: 'A', discount: { type: 'percentage', value: 10 }, isActive: true }, { _id: ids.stallB, stallName: 'B', batch: 'B', discount: { type: 'fixed', value: 500 }, isActive: true }]);
@@ -66,7 +72,7 @@ test('Backend V1.1 lifecycle', async (t) => {
   await t.test('proof deadline uses configured 30 minutes', () => assert.equal(created.paymentProofExpiresAt - created.paymentDeclaredAt, 1_800_000));
   await t.test('repeated payment declaration is rejected', () => expectStatus(declarePayment(created, now), 409));
   await t.test('cancellation after declaration is rejected', () => expectStatus(cancelOrder(created), 409));
-  await t.test('valid proof submission moves order to submitted while reserved', async () => { const res = response(); await submitPayment({ user, params: { orderId: String(created._id) }, body: { paymentProof: { url: '/proof/test.jpg' } } }, res); created = res.body.order; assert.equal(created.status, 'PAYMENT_SUBMITTED'); assert.equal(created.inventoryStatus, 'RESERVED'); });
+  await t.test('valid proof submission moves order to submitted while reserved', async () => { const res = response(); await submitPayment({ file, user, params: { orderId: String(created._id) }, body: { paymentProof: { url: '/proof/test.jpg' } } }, res); created = res.body.order; assert.equal(created.status, 'PAYMENT_SUBMITTED'); assert.equal(created.inventoryStatus, 'RESERVED'); });
   await t.test('submitted orders do not expire through cleanup', async () => { await Order.updateOne({ _id: created._id }, { reservationExpiresAt: new Date(0), paymentProofExpiresAt: new Date(0) }); await releaseExpiredReservations(); assert.equal((await Order.findById(created._id)).status, 'PAYMENT_SUBMITTED'); });
   await t.test('admin approval converts reserved inventory to sold', async () => { const payment = await Payment.findOne({ orderId: created._id }); const before = await StallFood.findById(ids.foodA); const result = await reviewPayment({ paymentId: payment._id, decision: 'APPROVED', adminId: admin._id }); const after = await StallFood.findById(ids.foodA); assert.equal(result.order.status, 'PAYMENT_APPROVED'); assert.equal(after.reservedTickets, before.reservedTickets - 3); assert.equal(after.soldTickets, before.soldTickets + 3); assert.equal(ticketsRemaining(after), ticketsRemaining(before)); });
   await t.test('approval creates exactly one ticket', async () => assert.equal(await Ticket.countDocuments({ orderId: created._id }), 1));
@@ -85,7 +91,7 @@ test('Backend V1.1 lifecycle', async (t) => {
 
   let evidenceExpired;
   await t.test('evidence deadline expiry uses distinct status and releases', async () => { await reserveInventory([{ stallFoodId: ids.foodB, quantity: 1 }]); evidenceExpired = await Order.create({ userId: user._id, items: [{ stallId: ids.stallB, stallFoodId: ids.foodB, stallName: 'B', foodName: 'Tea', quantity: 1, unitPrice: 2000, subtotal: 2000 }], totalQuantity: 1, totalAmount: 2000, paymentReference: 'FF-ORDER-EVIDENCE', reservationExpiresAt: new Date(Date.now() + 10000), status: 'PAYMENT_DECLARED', paymentDeclaredAt: new Date(0), paymentProofExpiresAt: new Date(0) }); await releaseExpiredReservations(); evidenceExpired = await Order.findById(evidenceExpired._id); assert.equal(evidenceExpired.status, 'PAYMENT_EVIDENCE_EXPIRED'); assert.equal(evidenceExpired.inventoryStatus, 'RELEASED'); });
-  await t.test('late proof upload is rejected', () => expectStatus(submitPayment({ user, params: { orderId: String(evidenceExpired._id) }, body: { paymentProof: { url: '/late.jpg' } } }, response()), 409));
+  await t.test('late proof upload is rejected', () => expectStatus(submitPayment({ file, user, params: { orderId: String(evidenceExpired._id) }, body: { paymentProof: { url: '/late.jpg' } } }, response()), 409));
   await t.test('evidence-expired order cannot be cancelled', () => expectStatus(cancelOrder(evidenceExpired), 409));
 
   let rejected;
@@ -94,6 +100,4 @@ test('Backend V1.1 lifecycle', async (t) => {
   await t.test('rejected order cannot later be approved', async () => { const payment = await Payment.findOne({ orderId: rejected._id }); await expectStatus(reviewPayment({ paymentId: payment._id, decision: 'APPROVED', adminId: admin._id }), 409); });
   await t.test('rejected order cannot be cancelled', () => expectStatus(cancelOrder(rejected), 409));
 
-  await mongoose.connection.dropDatabase();
-  await mongoose.disconnect();
 });

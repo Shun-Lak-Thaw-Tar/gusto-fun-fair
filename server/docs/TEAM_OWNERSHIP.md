@@ -45,3 +45,11 @@ git push origin develop
 ```
 
 Resolve pull conflicts before pushing. Never force-push shared `develop`.
+
+## Media backend feature ownership (2026-09-03)
+
+The media developer owns R2 setup, upload validation/storage, payment proof submission and replacement integration, the memories gallery/reactions, and admin snap-window/removal endpoints. Customer/admin frontend developers consume these APIs.
+
+See [MEDIA_BACKEND_REPORT.md](MEDIA_BACKEND_REPORT.md) for the agreed requirements and shared-contract changes. This feature uses branch `codex/r2-media-and-gallery`; do not overwrite teammates' shared changes when integrating it.
+
+Shared integration changes include Order.eventId and PAYMENT_REUPLOAD_REQUESTED, Payment proof/review history, proofVersion on admin reviews, transaction-based payment settlement, and a MongoDB replica-set requirement.

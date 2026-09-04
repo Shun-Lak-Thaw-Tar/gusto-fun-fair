@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-export const ORDER_STATUSES = ['AWAITING_PAYMENT', 'PAYMENT_DECLARED', 'PAYMENT_SUBMITTED', 'PAYMENT_APPROVED', 'PAYMENT_REJECTED', 'PAYMENT_EVIDENCE_EXPIRED', 'CANCELLED', 'EXPIRED'];
+export const ORDER_STATUSES = ['AWAITING_PAYMENT', 'PAYMENT_DECLARED', 'PAYMENT_SUBMITTED', 'PAYMENT_REUPLOAD_REQUESTED', 'PAYMENT_APPROVED', 'PAYMENT_REJECTED', 'PAYMENT_EVIDENCE_EXPIRED', 'CANCELLED', 'EXPIRED'];
 export const INVENTORY_STATUSES = ['RESERVED', 'SOLD', 'RELEASED'];
 const orderItemSchema = new mongoose.Schema({
   stallId: { type: mongoose.Schema.Types.ObjectId, ref: 'Stall', required: true },
@@ -13,6 +13,7 @@ const orderItemSchema = new mongoose.Schema({
 }, { _id: false });
 
 const orderSchema = new mongoose.Schema({
+  eventId: { type: mongoose.Schema.Types.ObjectId, ref: 'EventConfig', index: true },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   items: { type: [orderItemSchema], required: true, validate: [(items) => items.length > 0, 'Order requires at least one item'] },
   totalQuantity: { type: Number, required: true, min: 1 },

@@ -21,13 +21,13 @@ The Admin developer must reuse shared `pricingService`, `inventoryService`, `ord
 - Event Settings: implemented safe singleton reads/updates
 - Crush Letter moderation: implemented pending review, rejection, public approval, hide, and restore
 
-Event memories and all customer/admin frontend pages are excluded. Images and proofs retain provider-neutral `{ url, storageKey, provider }` references; no provider is selected.
+Customer/admin frontend pages remain excluded. The media developer implements R2 storage, gallery/reactions, admin snap-window/removal endpoints, and proof replacements; see [MEDIA_BACKEND_REPORT.md](MEDIA_BACKEND_REPORT.md). The admin developer consumes those APIs.
 
 ## Frozen lifecycle and no-refund policy
 
-Order statuses remain `AWAITING_PAYMENT`, `PAYMENT_DECLARED`, `PAYMENT_SUBMITTED`, `PAYMENT_APPROVED`, `PAYMENT_REJECTED`, `PAYMENT_EVIDENCE_EXPIRED`, `CANCELLED`, and `EXPIRED`. Inventory remains `RESERVED`, `SOLD`, or `RELEASED`.
+Order statuses remain `AWAITING_PAYMENT`, `PAYMENT_DECLARED`, `PAYMENT_SUBMITTED`, `PAYMENT_REUPLOAD_REQUESTED`, `PAYMENT_APPROVED`, `PAYMENT_REJECTED`, `PAYMENT_EVIDENCE_EXPIRED`, `CANCELLED`, and `EXPIRED`. Inventory remains `RESERVED`, `SOLD`, or `RELEASED`.
 
-Only a `PAYMENT_SUBMITTED + RESERVED` order with a `SUBMITTED` payment can be reviewed. Approval changes order/payment/inventory to `PAYMENT_APPROVED`/`APPROVED`/`SOLD`, creates exactly one ticket, and notifies the user. Rejection requires a reason, changes them to `PAYMENT_REJECTED`/`REJECTED`/`RELEASED`, creates no ticket, and performs no refund. Both actions remain idempotent. Admins must invoke these actions, never directly assign a chosen status.
+Approval and replacement requests require a `PAYMENT_SUBMITTED + RESERVED` order with a `SUBMITTED` payment. Final rejection may also close a `PAYMENT_REUPLOAD_REQUESTED` order. HTTP reviews require the current proofVersion to avoid reviewing stale images. A replacement request requires a reason, retains reservations without a deadline, and grants exactly one replacement upload. Approval changes order/payment/inventory to `PAYMENT_APPROVED`/`APPROVED`/`SOLD`, creates exactly one ticket, and notifies the user. Rejection requires a reason, changes them to `PAYMENT_REJECTED`/`REJECTED`/`RELEASED`, creates no ticket, and performs no refund. Both actions remain idempotent. Admins must invoke these actions, never directly assign a chosen status.
 
 ## Whole-order ticket redemption
 
@@ -79,7 +79,7 @@ Event changes never alter old totals, deadlines, declaration/proof timestamps, p
 
 ## Canonical website notifications
 
-Use `PAYMENT_APPROVED`, `PAYMENT_REJECTED`, `ORDER_EXPIRED`, and `PAYMENT_EVIDENCE_EXPIRED`. Website notifications only—no SMS, email, or push integration.
+Use `PAYMENT_APPROVED`, `PAYMENT_REJECTED`, `PAYMENT_REUPLOAD_REQUESTED`, `ORDER_EXPIRED`, and `PAYMENT_EVIDENCE_EXPIRED`. Rejection can include its reason; expiry notifications explain that reserved food tickets were released. Website notifications only—no SMS, email, or push integration.
 
 ## Production data readiness
 

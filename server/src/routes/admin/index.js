@@ -12,8 +12,11 @@ import stallFoodRoutes from './stallFoodRoutes.js';
 import statisticsRoutes from './statisticsRoutes.js';
 import ticketRoutes from './ticketRoutes.js';
 
+import memoryRoutes from './memoryRoutes.js';
+
 const router = Router();
 router.use(requireAuth, requireAdmin);
+router.use('/memories', memoryRoutes);
 router.use('/dashboard', dashboardRoutes);
 router.use('/crush-letters', crushLetterRoutes);
 router.use('/stalls', stallRoutes);
