@@ -13,7 +13,7 @@ const shutdown = async (signal) => {
 try {
   assertRuntimeEnv();
   await connectDatabase();
-  console.log('MongoDB connected');
+  console.log(`MongoDB connected (${env.mongoTarget})`);
   server = app.listen(env.port, () => console.log(`Fun Fair API listening on port ${env.port}`));
   process.on('SIGINT', () => shutdown('SIGINT'));
   process.on('SIGTERM', () => shutdown('SIGTERM'));

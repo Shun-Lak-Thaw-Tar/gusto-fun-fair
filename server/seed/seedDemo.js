@@ -13,7 +13,6 @@ import { findAvailableSlug } from '../src/services/stallService.js';
 import { migrateLegacyFoodItems } from '../src/services/foodMigrationService.js';
 
 const assertSafeDatabase = () => {
-  if (env.nodeEnv === 'production') throw new Error('Demo seeding is disabled in production');
   const databaseName = new URL(env.mongoUri).pathname.slice(1).split('?')[0];
   if (!databaseName || databaseName === 'admin' || databaseName === 'local' || databaseName === 'config') throw new Error('Refusing to seed an unsafe database target');
 };

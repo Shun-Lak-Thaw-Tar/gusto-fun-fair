@@ -7,6 +7,8 @@ git checkout develop
 git pull origin develop
 ```
 
+Normal local development uses `NODE_ENV=development` and the privately configured development database variable. Shared hosted operation uses `NODE_ENV=production` and the production Atlas variable. Team members who require Atlas access must receive the URI privately; database credentials and `.env` files must never be committed or shared through Git.
+
 ## Developer A — Customer/User System
 
 Primary ownership covers customer authentication, browsing stalls/foods, cart and checkout integration, order creation/history, payment declaration and proof submission, permitted cancellation, customer ticket retrieval and notifications, customer routes/controllers, and customer-facing React pages.
