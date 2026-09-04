@@ -18,6 +18,7 @@ The Admin developer must reuse shared `pricingService`, `inventoryService`, `ord
 - Ticket Verification and Redemption: implemented whole-order lookup/redemption in shared and Admin namespaces
 - Statistics: implemented overview, approved sales per stall/food, and best-selling leaders
 - Event Settings: implemented safe singleton reads/updates
+- Crush Letter moderation: implemented pending review, rejection, public approval, hide, and restore
 
 Event memories and all customer/admin frontend pages are excluded. Images and proofs retain provider-neutral `{ url, storageKey, provider }` references; no provider is selected.
 
@@ -65,7 +66,9 @@ Food ticket limits must satisfy `newTicketLimit >= reservedTickets + soldTickets
 
 Keep the singleton `configKey = "current"` and explicit `eventTimezone = "Asia/Yangon"`. Admin may update event name/date, preorder opening/closing timestamps, KBZ information, instructions, reservation/grace durations, `orderingEnabled`, and the approved nested feature flags. Enforce `preorderOpenAt < preorderCloseAt < eventDate`; closing is not required to be exactly 24 hours before the event. New orders require both the scheduled window and the manual `orderingEnabled` switch.
 
-Current independent event-day controls are `featureFlags.memoriesEnabled` and `featureFlags.eventPageEnabled`, both defaulting to `false`. Partial flag updates preserve other flag values, and unknown flag names are rejected. Two more explicit flags may be added to the schema and validation later when their requirements are known; arbitrary client-defined flags are not accepted. Payment review/approval/rejection and ticket redemption have no feature switch and remain available under their existing authorization and lifecycle rules.
+Current independent event-day controls are `featureFlags.memoriesEnabled`, `featureFlags.eventPageEnabled`, and `featureFlags.crushLettersEnabled`, all defaulting to `false`. The Crush Letter flag controls new anonymous submissions; approved listing remains readable when it is off. Partial flag updates preserve other flag values, and unknown flag names are rejected. One more explicit flag may be added later when its requirements are known; arbitrary client-defined flags are not accepted. Payment review/approval/rejection and ticket redemption have no feature switch and remain available under their existing authorization and lifecycle rules.
+
+Crush Letter moderation is Admin-owned. Admin can list/filter letters, inspect details, review pending letters as approved or rejected, and hide/restore approved content. Normal users and Stall Owners have no moderation access. Status-based moderation is the normal workflow; no hard-delete endpoint is provided.
 
 The future Admin interface must confirm consequential switch changes before sending the validated update. Confirmation is a frontend safeguard; the API does not accept or require a `confirmed` field.
 

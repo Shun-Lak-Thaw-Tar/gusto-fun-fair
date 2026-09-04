@@ -41,6 +41,7 @@ Registration currently uses a unique name plus password; names are matched case-
 - `POST /api/payments/orders/:orderId`
 - `GET /api/tickets/mine`; admin ticket lookup and redemption
 - `GET|POST /api/memories` (upload references only; two-photo eligibility enforced)
+- Public anonymous Crush Letter submission and approved-only paginated listing
 - Admin payment review and best-selling-stall statistics
 
 Order requests contain only food item IDs and quantities. Duplicate IDs are consolidated, the server calculates authoritative price snapshots, and conditional MongoDB updates immediately reserve tickets. Reservations last for the configurable 60-minute demo default. After external KBZ payment, the customer must declare payment before that deadline and then has the configurable 30-minute demo grace period to submit proof. Declaration permanently locks normal user cancellation because payments are non-refundable.
@@ -57,7 +58,9 @@ Backend V1.3 implements Admin stall/food/order/statistics/event/ticket managemen
 
 Stall, food, and current-event records are demo data because final information is not available. MongoDB supports a dynamic number of stalls and foods, so real records can replace them without schema changes. Payment verification is manual KBZ verification; there is no gateway or refund integration. The media service intentionally has no selected provider and models store provider-neutral references. Website notifications are stored only in MongoDB; no external notification service is integrated.
 
-Event configuration uses a unique `configKey: "current"` singleton and `eventTimezone: "Asia/Yangon"`. New orders require both `orderingEnabled` and `preorderOpenAt <= now < preorderCloseAt`; the manual switch never overrides the authoritative schedule. Validation requires opening before closing and closing before the event, without an exact 24-hour rule. Independent `featureFlags.memoriesEnabled` and `featureFlags.eventPageEnabled` default to `false`. Payment review/approval/rejection and ticket redemption intentionally have no feature switches.
+Event configuration uses a unique `configKey: "current"` singleton and `eventTimezone: "Asia/Yangon"`. New orders require both `orderingEnabled` and `preorderOpenAt <= now < preorderCloseAt`; the manual switch never overrides the authoritative schedule. Validation requires opening before closing and closing before the event, without an exact 24-hour rule. Independent `featureFlags.memoriesEnabled`, `featureFlags.eventPageEnabled`, and `featureFlags.crushLettersEnabled` default to `false`. Payment review/approval/rejection and ticket redemption intentionally have no feature switches.
+
+Crush Letter V1.1 preserves anonymous no-login submission while adding EventConfig control, pending Admin moderation, approved-only public visibility, pagination, safe response fields, and a shared-network-friendly 30-successful-submissions-per-ten-minutes in-memory IP rate limit. Sender identity and IP addresses are never stored. See [docs/CRUSH_LETTER_SYSTEM_SPEC.md](docs/CRUSH_LETTER_SYSTEM_SPEC.md).
 
 Launch preparation confirms preorder dates of 8 September 2026 through 10 September 2026 and an event date of 11 September 2026 in Myanmar Time. Exact opening and closing times remain unconfirmed and must be entered by an Admin when known; development data must not guess them. Two additional event-day controls are expected later, but their names and rules must be added explicitly only after requirements are confirmed.
 

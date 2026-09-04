@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 const featureFlagsSchema = new mongoose.Schema({
   memoriesEnabled: { type: Boolean, default: false },
   eventPageEnabled: { type: Boolean, default: false },
+  crushLettersEnabled: { type: Boolean, default: false },
 }, { _id: false, strict: 'throw' });
 
 const eventConfigSchema = new mongoose.Schema({

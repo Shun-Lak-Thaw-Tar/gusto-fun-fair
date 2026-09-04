@@ -4,11 +4,12 @@ import {
   createCrushLetter,
   listCrushLetters,
 } from '../controllers/crushLetterController.js';
+import { crushLetterSubmissionLimiter } from '../middleware/crushLetterRateLimit.js';
 
 const router = Router();
 
 router.get('/', listCrushLetters);
 
-router.post('/', createCrushLetter);
+router.post('/', crushLetterSubmissionLimiter, createCrushLetter);
 
 export default router;

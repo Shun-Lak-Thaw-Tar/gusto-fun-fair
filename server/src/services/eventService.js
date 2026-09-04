@@ -30,6 +30,7 @@ export const presentEvent = (config, now = new Date(), includePayment = false) =
   featureFlags: {
     memoriesEnabled: config.featureFlags?.memoriesEnabled ?? false,
     eventPageEnabled: config.featureFlags?.eventPageEnabled ?? false,
+    crushLettersEnabled: config.featureFlags?.crushLettersEnabled ?? false,
   },
   orderReservationMinutes: config.orderReservationMinutes,
   paymentProofGraceMinutes: config.paymentProofGraceMinutes,

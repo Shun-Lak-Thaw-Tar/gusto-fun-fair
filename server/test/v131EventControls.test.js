@@ -44,6 +44,7 @@ test('Backend V1.3.1 event schedule and feature controls', async (t) => {
     assert.equal(event.eventTimezone, 'Asia/Yangon');
     assert.equal(event.featureFlags.memoriesEnabled, false);
     assert.equal(event.featureFlags.eventPageEnabled, false);
+    assert.equal(event.featureFlags.crushLettersEnabled, false);
   });
   await t.test('before opening plus ordering on is UPCOMING and rejected', () => {
     assert.equal(derivePreorderStatus(event, new Date(openAt.getTime() - 1)), 'UPCOMING');
@@ -86,20 +87,20 @@ test('Backend V1.3.1 event schedule and feature controls', async (t) => {
   await t.test('Admin enables Memories', async () => assert.equal((await request('/admin/event', { method: 'PATCH', auth: headers(admin), body: { featureFlags: { memoriesEnabled: true } } })).body.event.featureFlags.memoriesEnabled, true));
   await t.test('updating Event Page preserves Memories', async () => {
     const result = await request('/admin/event', { method: 'PATCH', auth: headers(admin), body: { featureFlags: { eventPageEnabled: true } } });
-    assert.deepEqual(result.body.event.featureFlags, { memoriesEnabled: true, eventPageEnabled: true });
+    assert.deepEqual(result.body.event.featureFlags, { memoriesEnabled: true, eventPageEnabled: true, crushLettersEnabled: false });
   });
   await t.test('Admin independently disables Memories', async () => {
     const result = await request('/admin/event', { method: 'PATCH', auth: headers(admin), body: { featureFlags: { memoriesEnabled: false } } });
-    assert.deepEqual(result.body.event.featureFlags, { memoriesEnabled: false, eventPageEnabled: true });
+    assert.deepEqual(result.body.event.featureFlags, { memoriesEnabled: false, eventPageEnabled: true, crushLettersEnabled: false });
   });
   await t.test('Admin independently disables Event Page', async () => {
     const result = await request('/admin/event', { method: 'PATCH', auth: headers(admin), body: { featureFlags: { eventPageEnabled: false } } });
-    assert.deepEqual(result.body.event.featureFlags, { memoriesEnabled: false, eventPageEnabled: false });
+    assert.deepEqual(result.body.event.featureFlags, { memoriesEnabled: false, eventPageEnabled: false, crushLettersEnabled: false });
   });
   await t.test('ordering changes independently from feature flags', async () => {
     const result = await request('/admin/event', { method: 'PATCH', auth: headers(admin), body: { orderingEnabled: false } });
     assert.equal(result.body.event.orderingEnabled, false);
-    assert.deepEqual(result.body.event.featureFlags, { memoriesEnabled: false, eventPageEnabled: false });
+    assert.deepEqual(result.body.event.featureFlags, { memoriesEnabled: false, eventPageEnabled: false, crushLettersEnabled: false });
   });
   await t.test('payment and redemption toggle fields are not accepted', async () => {
     assert.equal((await request('/admin/event', { method: 'PATCH', auth: headers(admin), body: { paymentReviewEnabled: false } })).status, 400);
@@ -109,7 +110,7 @@ test('Backend V1.3.1 event schedule and feature controls', async (t) => {
     const result = await request('/event');
     assert.equal(result.status, 200);
     assert.equal(result.body.event.eventTimezone, 'Asia/Yangon');
-    assert.deepEqual(result.body.event.featureFlags, { memoriesEnabled: false, eventPageEnabled: false });
+    assert.deepEqual(result.body.event.featureFlags, { memoriesEnabled: false, eventPageEnabled: false, crushLettersEnabled: false });
     assert.equal('kbzAccountNumber' in result.body.event, false);
     assert.equal('updatedAt' in result.body.event, false);
   });

@@ -10,7 +10,7 @@ Returns `200` with API running status.
 
 ### `GET /api/event` — public
 
-Returns `200` with `eventName`, event and preorder dates, `eventTimezone` (`Asia/Yangon`), `orderingEnabled`, derived `preorderStatus` (`UPCOMING`, `OPEN`, `CLOSED`, or `DISABLED`), reservation/grace durations, and safe `featureFlags` containing `memoriesEnabled` and `eventPageEnabled`. Payment account details, audit fields, and internal IDs are not returned publicly.
+Returns `200` with `eventName`, event and preorder dates, `eventTimezone` (`Asia/Yangon`), `orderingEnabled`, derived `preorderStatus` (`UPCOMING`, `OPEN`, `CLOSED`, or `DISABLED`), reservation/grace durations, and safe `featureFlags` containing `memoriesEnabled`, `eventPageEnabled`, and `crushLettersEnabled`. Payment account details, audit fields, and internal IDs are not returned publicly.
 
 ### `GET /api/stalls` and `GET /api/stalls/:id` — public
 
@@ -19,6 +19,16 @@ Return active stalls.
 ### `GET /api/foods` and `GET /api/foods/:id` — public
 
 Return available foods, authoritative calculated `preorderPrice`, `ticketLimit`, and calculated `ticketsRemaining`. Internal `reservedTickets` and `soldTickets` counters are not exposed. `GET /api/foods?stallId=<id>` filters by stall.
+
+## Crush Letters
+
+### `POST /api/crush-letters` — public
+
+Accepts strict `{ "recipientName": "...", "message": "..." }` input without login. Recipient and message are trimmed, required, and limited to 100 and 1000 characters. Submission requires `featureFlags.crushLettersEnabled = true`; otherwise it returns `409`. New letters are always anonymous and `PENDING`. The safe `201` response confirms submission for review without returning the message, version field, or moderation audit data. The route permits 30 successful submissions per transient IP key per ten minutes and returns `429` when exceeded; failed/disabled requests do not consume quota and IP addresses are not persisted.
+
+### `GET /api/crush-letters?page=1&limit=20` — public
+
+Returns only `APPROVED` letters, newest first, with `id`, `recipientName`, `message`, and `createdAt`. `PENDING`, `REJECTED`, `HIDDEN`, version fields, update timestamps, and moderation metadata are excluded. Pagination defaults to 20 and is capped at 50. Listing remains available while new submissions are disabled.
 
 ## Orders
 
@@ -115,6 +125,10 @@ No Admin or Stall Owner frontend is implemented. Memories and image-provider int
 - `GET /api/admin/orders?status=...` and `GET /api/admin/orders/:id` — safe listing/filter/details; no arbitrary status endpoint
 - `GET /api/admin/statistics/overview|stalls|foods|best-selling-stall`
 - `GET|PATCH /api/admin/event` — singleton schedule, manual ordering switch, payment settings, and explicit feature flags
+- `GET /api/admin/crush-letters` — paginated moderation list with optional exact status filter
+- `GET /api/admin/crush-letters/:id` — moderation detail
+- `PATCH /api/admin/crush-letters/:id/review` — `PENDING → APPROVED|REJECTED`
+- `PATCH /api/admin/crush-letters/:id/visibility` — `APPROVED ↔ HIDDEN`
 - `GET /api/admin/tickets/:code` and `POST /api/admin/tickets/:code/redeem` — dedicated namespace reusing shared behavior
 
 All write bodies are allow-listed and reject unknown fields. Food input never accepts authoritative `preorderPrice`; historical order snapshots are not updated.
@@ -143,7 +157,7 @@ Best-Selling Stall means greatest total item quantity in `PAYMENT_APPROVED` orde
 
 After orders exist, deactivate stalls (`isActive = false`) and foods (`isAvailable = false`) instead of hard-deleting referenced data. Ticket-limit updates must enforce `newTicketLimit >= reservedTickets + soldTickets`. Price and discount edits affect future orders only; historical order snapshots are never recalculated.
 
-Event settings retain the `current` singleton, `Asia/Yangon` timezone, and 60/30 defaults. Validation requires `preorderOpenAt < preorderCloseAt < eventDate`; there is no exact 24-hour constraint. Ordering is allowed only inside the schedule while `orderingEnabled` is true. `featureFlags.memoriesEnabled` and `featureFlags.eventPageEnabled` are independently patchable, default false, preserve omitted siblings, and reject unknown keys. Payment review/approval/rejection and ticket redemption have no EventConfig switch. Updates affect future operations and never rewrite historical orders. Canonical notification types are `PAYMENT_APPROVED`, `PAYMENT_REJECTED`, `ORDER_EXPIRED`, and `PAYMENT_EVIDENCE_EXPIRED`.
+Event settings retain the `current` singleton, `Asia/Yangon` timezone, and 60/30 defaults. Validation requires `preorderOpenAt < preorderCloseAt < eventDate`; there is no exact 24-hour constraint. Ordering is allowed only inside the schedule while `orderingEnabled` is true. `featureFlags.memoriesEnabled`, `featureFlags.eventPageEnabled`, and `featureFlags.crushLettersEnabled` are independently patchable, default false, preserve omitted siblings, and reject unknown keys. The Crush Letter flag controls new submissions only, not approved public listing. Payment review/approval/rejection and ticket redemption have no EventConfig switch. Updates affect future operations and never rewrite historical orders. Canonical notification types are `PAYMENT_APPROVED`, `PAYMENT_REJECTED`, `ORDER_EXPIRED`, and `PAYMENT_EVIDENCE_EXPIRED`.
 
 Admin clients should show confirmation dialogs before changing operational switches, but the API requires no confirmation flag. Confirmed launch dates are 8 September 2026 opening, 10 September 2026 closing, and 11 September 2026 event date in Myanmar Time; exact opening/closing times remain TBD. Two more explicit event-day flags are expected later, with names and behavior not yet defined.
 

@@ -31,7 +31,7 @@ try {
     configKey: 'current', eventName: 'DEMO Fun Fair 2030', eventDate: new Date('2030-02-15T09:00:00+06:30'), eventTimezone: 'Asia/Yangon',
     preorderOpenAt: new Date('2026-01-01T00:00:00+06:30'), preorderCloseAt: new Date('2030-02-14T09:00:00+06:30'), orderingEnabled: true,
     kbzAccountName: 'DEMO FUN FAIR ACCOUNT', kbzAccountNumber: 'DEMO-000000000', paymentInstructions: 'DEMO ONLY: include the order payment reference in the KBZ payment note.',
-    orderReservationMinutes: 60, paymentProofGraceMinutes: 30, featureFlags: { memoriesEnabled: false, eventPageEnabled: false },
+    orderReservationMinutes: 60, paymentProofGraceMinutes: 30, featureFlags: { memoriesEnabled: false, eventPageEnabled: false, crushLettersEnabled: false },
   };
   await EventConfig.updateOne({ configKey: 'current' }, { $setOnInsert: demoEvent }, { upsert: true, runValidators: true, timestamps: false });
   const adminName = process.env.SEED_ADMIN_NAME?.trim();
