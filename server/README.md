@@ -12,7 +12,9 @@ Node.js 24, Express, MongoDB, and Mongoose REST API foundation for the college F
 6. Visit `http://localhost:5000/api/health`.
 7. Retrieve demo data from `GET /api/stalls` and `GET /api/foods`. Filter foods with `GET /api/foods?stallId=<id>`.
 
-The default local database is `mongodb://127.0.0.1:27017/funfair`. The seed is idempotent for its named demo catalog and refuses to run when `NODE_ENV=production`; it does not wipe unrelated records. Optional demo admin credentials can be supplied through `SEED_ADMIN_NAME` and `SEED_ADMIN_PASSWORD` and are never hard-coded.
+Database selection is environment-based: development reads `MONGODB_URI_DEVELOPMENT` (or uses the documented local default when omitted), production reads the private `MONGODB_URI_PRODUCTION` Atlas URI, and automated tests retain their explicitly isolated test databases. Missing `NODE_ENV` defaults to development. Production never falls back to a local database, and missing production configuration fails before connection without logging the URI. Real credentials belong only in an ignored `.env` file or deployment environment variables.
+
+The seed is idempotent for its named demo catalog and does not wipe unrelated records. It uses the database selected by `NODE_ENV`; therefore running `npm run seed:demo` in production intentionally affects the shared Atlas database and must be done with care. It is never run automatically at application startup. Optional demo admin credentials can be supplied through `SEED_ADMIN_NAME` and `SEED_ADMIN_PASSWORD` and are never hard-coded.
 
 ## Architecture
 
@@ -77,3 +79,7 @@ Atomic conditional updates prevent any individual StallFood entry from exceeding
 - `npm run seed:demo` — safe development demo upsert
 - `npm run migrate:foods` — idempotently migrate legacy FoodItem data (production requires `ALLOW_FOOD_MIGRATION=true`)
 - `npm test` — unit tests
+
+## Database environments
+
+For normal local work use `NODE_ENV=development` with `MONGODB_URI_DEVELOPMENT`. Hosted production uses `NODE_ENV=production` with a privately supplied `MONGODB_URI_PRODUCTION`. Tests connect directly to their existing named test databases and never select the production variable. Mongoose supports both normal `mongodb://` and Atlas `mongodb+srv://` connection strings without an Atlas-specific SDK.
