@@ -1,6 +1,6 @@
 # Admin System Specification (Future Work)
 
-This document freezes the contract for the future Admin System. It does not claim that the full Admin API or UI is implemented.
+This document describes the implemented V1.3 Admin backend and the future Admin UI. No Admin frontend is implemented yet.
 
 ## Security and module boundary
 
@@ -10,14 +10,16 @@ The Admin developer must reuse shared `pricingService`, `inventoryService`, `ord
 
 ## Planned modules
 
-- Dashboard: frozen metrics below
-- Stall Management: create/edit/deactivate; no normal hard deletion after orders exist
-- Food Management: create/edit/deactivate and safe ticket-limit validation
-- Order Management: inspect/filter only; no arbitrary status dropdown
+- Dashboard: implemented backend metrics endpoint
+- Stall Management: implemented create/edit/deactivate, details/sales, and owner-account management; no hard-delete route
+- Food Catalog: implemented reusable Food identity create/list/edit/deactivate
+- Stall Menu Management: implemented StallFood assignment, per-entry price/discount/availability, and atomic ticket-limit validation
+- Order Management: implemented inspect/filter only; no arbitrary status endpoint
 - Pending Payment Management and Payment Review: call the existing shared review lifecycle
-- Ticket Verification and Redemption: whole-order lookup/redemption
-- Statistics: approved sales per stall/food and best-selling leaders
-- Event Settings: safely update the singleton current EventConfig
+- Ticket Verification and Redemption: implemented whole-order lookup/redemption in shared and Admin namespaces
+- Statistics: implemented overview, approved sales per stall/food, and best-selling leaders
+- Event Settings: implemented safe singleton reads/updates
+- Crush Letter moderation: implemented pending review, rejection, public approval, hide, and restore
 
 Customer/admin frontend pages remain excluded. The media developer implements R2 storage, gallery/reactions, admin snap-window/removal endpoints, and proof replacements; see [MEDIA_BACKEND_REPORT.md](MEDIA_BACKEND_REPORT.md). The admin developer consumes those APIs.
 
@@ -39,13 +41,15 @@ One approved order receives one digital ticket even when it contains several foo
 - Pending Payment Review: `PAYMENT_SUBMITTED`
 - Approved Orders: `PAYMENT_APPROVED`
 - Rejected Orders: `PAYMENT_REJECTED`
-- Expired Orders: combined `EXPIRED + PAYMENT_EVIDENCE_EXPIRED`; implementations may also show separate cards
+- Expired Orders: combined `EXPIRED + PAYMENT_EVIDENCE_EXPIRED`
 - Cancelled Orders: `CANCELLED`
 - Approved Revenue: sum `Order.totalAmount` only for approved orders
 - Food Tickets Sold: sum all item quantities only in approved orders
-- Digital Tickets Issued: number of Ticket records generated for approved orders
+- Digital Tickets Issued: number of Ticket records
 - Digital Tickets Redeemed: Ticket records with `status = REDEEMED`
-- Physical Tickets Issued: sum associated order-item quantities for redeemed digital tickets
+- Physical Tickets Issued: sum associated order quantities for redeemed tickets
+- Active Stalls: `isActive = true`
+- Available Food Items: available StallFood entries whose Food and Stall are active
 
 Digital ticket count and physical food-ticket quantity are different metrics.
 
@@ -55,13 +59,21 @@ Sales per stall/food use immutable OrderItem snapshots from `PAYMENT_APPROVED` o
 
 ## Data-management safety
 
-Before real orders exist, demo stalls/foods may be removed when preparing the real catalog. After orders exist, normally set `Stall.isActive = false` or `FoodItem.isAvailable = false`; do not hard-delete referenced records. Hard deletion, if ever offered, is limited to demonstrably unused development records.
+Before real orders exist, demo stalls/foods may be removed when preparing the real catalog. After orders exist, normally set `Stall.isActive = false`, `Food.isActive = false`, or `StallFood.isAvailable = false`; do not hard-delete referenced records. Hard deletion, if ever offered, is limited to demonstrably unused development records.
 
-Food ticket limits must satisfy `newTicketLimit >= reservedTickets + soldTickets`, enforced server-side. Price/discount changes affect future orders only; existing `unitPrice`, `subtotal`, and `totalAmount` snapshots must never be recalculated.
+StallFood ticket limits must satisfy `newTicketLimit >= reservedTickets + soldTickets`, enforced server-side. Each menu entry owns its price and discount. Changes affect future orders only; existing `unitPrice`, `subtotal`, and `totalAmount` snapshots must never be recalculated.
 
 ## Event settings
 
-Keep the singleton `configKey = "current"`. Future settings may update event name/date, preorder opening, KBZ information, instructions, and ordering enabled. Enforce `preorderOpenAt < preorderCloseAt` and the project rule `preorderCloseAt = one day before eventDate`. Reservation/grace defaults remain 60/30 minutes unless deliberately configured.
+Keep the singleton `configKey = "current"` and explicit `eventTimezone = "Asia/Yangon"`. Admin may update event name/date, preorder opening/closing timestamps, KBZ information, instructions, reservation/grace durations, `orderingEnabled`, and the approved nested feature flags. Enforce `preorderOpenAt < preorderCloseAt < eventDate`; closing is not required to be exactly 24 hours before the event. New orders require both the scheduled window and the manual `orderingEnabled` switch.
+
+Current independent event-day controls are `featureFlags.memoriesEnabled`, `featureFlags.eventPageEnabled`, and `featureFlags.crushLettersEnabled`, all defaulting to `false`. The Crush Letter flag controls new anonymous submissions; approved listing remains readable when it is off. Partial flag updates preserve other flag values, and unknown flag names are rejected. One more explicit flag may be added later when its requirements are known; arbitrary client-defined flags are not accepted. Payment review/approval/rejection and ticket redemption have no feature switch and remain available under their existing authorization and lifecycle rules.
+
+Crush Letter moderation is Admin-owned. Admin can list/filter letters, inspect details, review pending letters as approved or rejected, and hide/restore approved content. Normal users and Stall Owners have no moderation access. Status-based moderation is the normal workflow; no hard-delete endpoint is provided.
+
+The future Admin interface must confirm consequential switch changes before sending the validated update. Confirmation is a frontend safeguard; the API does not accept or require a `confirmed` field.
+
+Launch dates are confirmed as preorder opening on 8 September 2026, preorder closing on 10 September 2026, and the event on 11 September 2026 in Myanmar Time. Exact opening and closing times remain TBD and must not be guessed or written into development configuration.
 
 Event changes never alter old totals, deadlines, declaration/proof timestamps, payments, tickets, or redemptions. `DEMO Fun Fair 2030` and all demo KBZ/event values must be replaced and verified before production launch.
 

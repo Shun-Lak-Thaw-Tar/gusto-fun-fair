@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
 import { mediaSchemaDefinition } from './shared.js';
 
+// Legacy migration source only. Active catalog, pricing, and inventory use Food + StallFood.
+
 const foodItemSchema = new mongoose.Schema({
   stallId: { type: mongoose.Schema.Types.ObjectId, ref: 'Stall', required: true, index: true },
   name: { type: String, required: true, trim: true, maxlength: 100 },

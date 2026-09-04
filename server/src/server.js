@@ -18,7 +18,7 @@ const shutdown = async (signal) => {
 try {
   assertRuntimeEnv();
   await connectDatabase();
-  console.log('MongoDB connected');
+  console.log(`MongoDB connected (${env.mongoTarget})`);
   mediaTimer = setInterval(async () => {
     if (cleanupRunning) return;
     cleanupRunning = true;

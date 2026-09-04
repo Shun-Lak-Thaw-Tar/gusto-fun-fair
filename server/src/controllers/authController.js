@@ -23,6 +23,7 @@ export const login = async (req, res) => {
   const name = normalizeName(parsed.data.name);
   const user = await User.findOne({ nameNormalized: loginKey(name) }).select('+passwordHash');
   if (!user || !(await bcrypt.compare(parsed.data.password, user.passwordHash))) throw new ApiError(401, 'Invalid name or password');
+  if (user.isActive === false) throw new ApiError(403, 'Account is disabled');
   user.passwordHash = undefined;
   res.json({ user, token: tokenFor(user) });
 };

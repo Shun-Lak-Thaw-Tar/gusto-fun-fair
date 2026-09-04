@@ -4,7 +4,9 @@ export const ORDER_STATUSES = ['AWAITING_PAYMENT', 'PAYMENT_DECLARED', 'PAYMENT_
 export const INVENTORY_STATUSES = ['RESERVED', 'SOLD', 'RELEASED'];
 const orderItemSchema = new mongoose.Schema({
   stallId: { type: mongoose.Schema.Types.ObjectId, ref: 'Stall', required: true },
-  foodItemId: { type: mongoose.Schema.Types.ObjectId, ref: 'FoodItem', required: true },
+  stallFoodId: { type: mongoose.Schema.Types.ObjectId, ref: 'StallFood' },
+  foodId: { type: mongoose.Schema.Types.ObjectId, ref: 'Food' },
+  foodItemId: { type: mongoose.Schema.Types.ObjectId, ref: 'FoodItem' },
   stallName: { type: String, required: true }, foodName: { type: String, required: true },
   quantity: { type: Number, required: true, min: 1, validate: Number.isInteger },
   unitPrice: { type: Number, required: true, min: 0 }, subtotal: { type: Number, required: true, min: 0 },

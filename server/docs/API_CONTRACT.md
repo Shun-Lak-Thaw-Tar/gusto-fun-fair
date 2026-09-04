@@ -1,4 +1,4 @@
-# Fun Fair Backend API Contract
+# Fun Fair Backend V1.4 API Contract
 
 All JSON errors use `{ "error": { "message": "..." } }`. Protected endpoints require `Authorization: Bearer <JWT>`. IDs below are MongoDB IDs. Uploads now require multipart image bytes. See [the media API report](MEDIA_BACKEND_REPORT.md) for the full upload/gallery contract.
 
@@ -10,7 +10,7 @@ Returns `200` with API running status.
 
 ### `GET /api/event` — public
 
-Returns `200` with `eventName`, event and preorder dates, `orderingEnabled`, derived `preorderStatus` (`UPCOMING`, `OPEN`, `CLOSED`, or `DISABLED`), `orderReservationMinutes`, and `paymentProofGraceMinutes`. Payment account details are not returned publicly by this endpoint.
+Returns `200` with `eventName`, event and preorder dates, `eventTimezone` (`Asia/Yangon`), `orderingEnabled`, derived `preorderStatus` (`UPCOMING`, `OPEN`, `CLOSED`, or `DISABLED`), reservation/grace durations, and safe `featureFlags` containing `memoriesEnabled`, `eventPageEnabled`, and `crushLettersEnabled`. Payment account details, audit fields, and internal IDs are not returned publicly.
 
 ### `GET /api/stalls` and `GET /api/stalls/:id` — public
 
@@ -18,7 +18,17 @@ Return active stalls.
 
 ### `GET /api/foods` and `GET /api/foods/:id` — public
 
-Return available foods, authoritative calculated `preorderPrice`, `ticketLimit`, and calculated `ticketsRemaining`. Internal `reservedTickets` and `soldTickets` counters are not exposed. `GET /api/foods?stallId=<id>` filters by stall.
+Return available sellable `StallFood` entries enriched with `stallFoodId`, `stallId`, `foodId`, `stallName`, nested generic `food`, authoritative `eventDayPrice`, relationship-owned `discount`, calculated `preorderPrice`, `ticketLimit`, and `ticketsRemaining`. Internal `reservedTickets` and `soldTickets` are not exposed. Filters are `?stallId=<id>` and `?foodId=<id>`; the detail ID is a `stallFoodId`.
+
+## Crush Letters
+
+### `POST /api/crush-letters` — public
+
+Accepts strict `{ "recipientName": "...", "message": "..." }` input without login. Recipient and message are trimmed, required, and limited to 100 and 1000 characters. Submission requires `featureFlags.crushLettersEnabled = true`; otherwise it returns `409`. New letters are always anonymous and `PENDING`. The safe `201` response confirms submission for review without returning the message, version field, or moderation audit data. The route permits 30 successful submissions per transient IP key per ten minutes and returns `429` when exceeded; failed/disabled requests do not consume quota and IP addresses are not persisted.
+
+### `GET /api/crush-letters?page=1&limit=20` — public
+
+Returns only `APPROVED` letters, newest first, with `id`, `recipientName`, `message`, and `createdAt`. `PENDING`, `REJECTED`, `HIDDEN`, version fields, update timestamps, and moderation metadata are excluded. Pagination defaults to 20 and is capped at 50. Listing remains available while new submissions are disabled.
 
 ## Orders
 
@@ -27,10 +37,10 @@ Return available foods, authoritative calculated `preorderPrice`, `ticketLimit`,
 Request:
 
 ```json
-{ "items": [{ "foodItemId": "...", "quantity": 2 }] }
+{ "items": [{ "stallFoodId": "...", "quantity": 2 }] }
 ```
 
-Duplicate food IDs are consolidated. Client prices, totals, names, discounts, remaining counts, and roles are ignored. The event must be enabled and current time must satisfy `preorderOpenAt <= now < preorderCloseAt`. Each food and stall must be active/available.
+Duplicate StallFood IDs are consolidated. Unknown fields—including client prices, totals, names, discounts, and remaining counts—are rejected. Deprecated `foodItemId` may temporarily replace `stallFoodId` only when it maps to migrated data; clients must never send both. The event must be enabled and current time must satisfy `preorderOpenAt <= now < preorderCloseAt`. Each Food, Stall, and StallFood must be active/available.
 
 Returns `201` with the stored order plus checkout information: exact amount, `FF-ORDER-XXXXXX` payment reference, KBZ details/instructions, and `reservationExpiresAt`. Order state is `AWAITING_PAYMENT + RESERVED`. The demo reservation duration is 60 minutes. Important errors: `400` malformed/missing items, `409` event unavailable or insufficient inventory, `401` unauthenticated, `503` missing current event configuration.
 
@@ -78,51 +88,77 @@ Business-sensitive operations run idempotent cleanup:
 - `PAYMENT_DECLARED + RESERVED` at/after `paymentProofExpiresAt` becomes `PAYMENT_EVIDENCE_EXPIRED + RELEASED`.
 - `PAYMENT_SUBMITTED` and `PAYMENT_REUPLOAD_REQUESTED` are excluded from timer cleanup.
 
-Per-food reservation uses an atomic conditional update requiring `reservedTickets + soldTickets + requestedQuantity <= ticketLimit`. For multi-item orders, reservations run deterministically and earlier successful holds are explicitly compensated if a later item fails. Release and reserved-to-sold conversion also compensate earlier items when a later item operation fails. Repeated lifecycle transitions first conditionally claim the order state, preventing normal double-release/double-sale behavior.
+Per-StallFood reservation uses an atomic conditional update requiring `reservedTickets + soldTickets + requestedQuantity <= ticketLimit`. For multi-item orders, reservations run deterministically and earlier successful holds are explicitly compensated if a later item fails. Release and reserved-to-sold conversion also compensate earlier items when a later item operation fails. Repeated lifecycle transitions first conditionally claim the order state, preventing normal double-release/double-sale behavior.
 
 A replica set or sharded deployment is required and checked on startup. Payment review and new media operations use transactions. Existing order creation, cancellation, declaration, and expiry retain their conditional-update/compensation behavior.
 
-## Admin System future contract and ownership
+## Admin System contract and ownership
 
-### Implemented Admin endpoints
+All implemented Admin endpoints require the existing JWT plus `role = "admin"`.
 
-All require existing JWT authentication plus `role = "admin"`:
+### Implemented
 
+- `GET /api/admin/dashboard` — returns `{ "dashboard": { ... } }` with frozen dashboard metrics
 - `GET /api/admin/payments` — submitted payments awaiting manual review
 - `PATCH /api/admin/payments/:id/review` — approve/request replacement/reject through shared `paymentService`
 - `GET /api/admin/statistics/best-selling-stall` — approved-quantity leader; approved revenue breaks quantity ties, and `leaders` returns every exact tie
-- Existing ticket verification/redemption remains implemented at `GET /api/tickets/:code` and `POST /api/tickets/:code/redeem`, also admin-only
+- `GET /api/tickets/:code` and `POST /api/tickets/:code/redeem` — existing Admin-only whole-order ticket lookup/redemption
+
+The dashboard contains `totalOrders`, `awaitingPayment`, `paymentDeclared`, `pendingPaymentReview`, `approvedOrders`, `rejectedOrders`, combined `expiredOrders`, `cancelledOrders`, `approvedRevenue`, `foodTicketsSold`, `digitalTicketsIssued`, `digitalTicketsRedeemed`, `physicalTicketsIssued`, `activeStalls`, and `availableFoodItems`. Revenue and food-ticket quantities count approved orders only. Physical ticket quantities count only orders linked to redeemed digital tickets. Available foods must belong to active stalls.
 
 ### Planned, not implemented
 
-The protected router reserves `/api/admin/dashboard`, `/stalls`, `/foods`, `/orders`, `/tickets`, and `/event`. These subrouters currently expose no business endpoints. They must not be documented or treated as working CRUD APIs.
+No Admin or Stall Owner frontend is implemented. That is the only remaining boundary; the media/gallery/payment-proof backend is implemented (see above).
 
-Future work reuses the existing authentication and shared services. `pricingService`, `inventoryService`, `orderLifecycleService`, `paymentService`, `ticketService`, and `eventService` are shared business logic; Admin controllers must call them rather than duplicate transitions. `User`, `Stall`, `FoodItem`, `Order`, `Payment`, `Ticket`, `Redemption`, `Notification`, and `EventConfig` are coordinated shared contracts.
+### Implemented Admin management routes
 
-Frozen order states are `AWAITING_PAYMENT`, `PAYMENT_DECLARED`, `PAYMENT_SUBMITTED`, `PAYMENT_REUPLOAD_REQUESTED`, `PAYMENT_APPROVED`, `PAYMENT_REJECTED`, `PAYMENT_EVIDENCE_EXPIRED`, `CANCELLED`, and `EXPIRED`. Frozen inventory states are `RESERVED`, `SOLD`, and `RELEASED`. Approval or a replacement request requires a submitted payment; final rejection also accepts a replacement-requested payment. All reviews require the current proofVersion. Statuses change only through real approve/reject/cancel/expiry/redemption actions—never arbitrary status editing.
+- `GET|POST /api/admin/stalls` — list/create stalls
+- `GET|PATCH /api/admin/stalls/:id` — details/edit without changing the stable slug
+- `PATCH /api/admin/stalls/:id/status` — activate/deactivate
+- `GET|POST /api/admin/stalls/:stallId/owner` — view/create the one linked owner
+- `PATCH /api/admin/stalls/:stallId/owner/password` — reset owner password
+- `PATCH /api/admin/stalls/:stallId/owner/status` — enable/disable owner
+- `GET|POST /api/admin/foods` and `GET|PATCH /api/admin/foods/:id` — generic Food catalog only
+- `GET|POST /api/admin/stall-foods` and `GET|PATCH /api/admin/stall-foods/:id` — assignment, price, per-entry discount, ticket limit, and availability; list filters support `stallId` and `foodId`
+- `GET /api/admin/orders?status=...` and `GET /api/admin/orders/:id` — safe listing/filter/details; no arbitrary status endpoint
+- `GET /api/admin/statistics/overview|stalls|foods|best-selling-stall`
+- `GET|PATCH /api/admin/event` — singleton schedule, manual ordering switch, payment settings, and explicit feature flags
+- `GET /api/admin/crush-letters` — paginated moderation list with optional exact status filter
+- `GET /api/admin/crush-letters/:id` — moderation detail
+- `PATCH /api/admin/crush-letters/:id/review` — `PENDING → APPROVED|REJECTED`
+- `PATCH /api/admin/crush-letters/:id/visibility` — `APPROVED ↔ HIDDEN`
+- `GET /api/admin/tickets/:code` and `POST /api/admin/tickets/:code/redeem` — dedicated namespace reusing shared behavior
+- `GET|PUT /api/admin/memories/window` and `DELETE /api/admin/memories/:id` — snap-window configuration and admin photo removal (slot retained)
 
-### Whole-order redemption
+All write bodies are allow-listed and reject unknown fields. Food catalog input cannot contain selling fields. StallFood input never accepts `preorderPrice`, `reservedTickets`, `soldTickets`, or `ticketsRemaining`; historical order snapshots are not updated.
 
-One approved multi-item/multi-stall order has one digital ticket. Redeeming it marks the whole order's physical food-ticket quantities as issued. V1 has no partial item redemption, and repeated redemption remains blocked.
+### Implemented Stall Owner routes
 
-### Frozen dashboard/statistics definitions
+All require an active authenticated `stall_owner`; the linked stall comes from the database-backed user identity, never a request stall ID.
 
-- Total Orders: all statuses
-- Awaiting Payment, Payment Declared, Pending Review, Approved, Rejected, and Cancelled: their exact matching statuses
-- Expired Orders: combined `EXPIRED + PAYMENT_EVIDENCE_EXPIRED` (separate cards are also permitted)
-- Approved Revenue: sum approved `Order.totalAmount`
-- Food Tickets Sold: sum item quantities in approved orders
-- Digital Tickets Issued: Ticket records for approved orders
-- Digital Tickets Redeemed: `REDEEMED` Ticket records
-- Physical Tickets Issued: order-item quantities associated with redeemed tickets
+- `GET /api/stall-owner/dashboard` — owner, linked stall, approved-sales summary
+- `GET /api/stall-owner/stall` — linked stall
+- `GET /api/stall-owner/foods` — linked-stall StallFood entries populated with Food details and calculated prices/remaining counts
+- `GET /api/stall-owner/sales` — approved-only summary and item breakdown
+- `GET /api/stall-owner/share` — event/stall/food names, slug, and relative public path
 
-Best-Selling Stall means greatest total item quantity in `PAYMENT_APPROVED` orders. Approved stall revenue is the first tie-breaker; return every leader if both remain tied. Stall/food history comes from OrderItem snapshots.
+### Implemented public stall link
 
-### Admin data safety
+`GET /api/stalls/by-slug/:slug` returns an active stall and available foods with server-calculated preorder prices and remaining tickets. Owner accounts and sales are never included.
 
-After orders exist, deactivate stalls (`isActive = false`) and foods (`isAvailable = false`) rather than hard-delete referenced records. A ticket-limit update must enforce `newTicketLimit >= reservedTickets + soldTickets` server-side. Price and discount edits affect future orders only; historical order snapshots are never recalculated.
+Admin controllers must reuse `pricingService`, `inventoryService`, `orderLifecycleService`, `paymentService`, `ticketService`, and `eventService` rather than duplicate transitions. Shared models and lifecycle enums require coordination.
 
-Event settings retain the `current` singleton, 60/30 defaults, `preorderOpenAt < preorderCloseAt`, and closing one day before the event. Updates affect future operations and never rewrite old order/payment/ticket timestamps or amounts. Canonical website notification types are `PAYMENT_APPROVED`, `PAYMENT_REJECTED`, `PAYMENT_REUPLOAD_REQUESTED`, `ORDER_EXPIRED`, and `PAYMENT_EVIDENCE_EXPIRED`.
+Frozen order states are `AWAITING_PAYMENT`, `PAYMENT_DECLARED`, `PAYMENT_SUBMITTED`, `PAYMENT_REUPLOAD_REQUESTED`, `PAYMENT_APPROVED`, `PAYMENT_REJECTED`, `PAYMENT_EVIDENCE_EXPIRED`, `CANCELLED`, and `EXPIRED`; inventory states remain `RESERVED`, `SOLD`, and `RELEASED`. Approval or a replacement request requires a submitted payment; final rejection also accepts a replacement-requested payment. All reviews require the current proofVersion. Statuses change only through valid lifecycle actions — approve/reject/cancel/expiry/redemption — never arbitrary status editing.
+
+One approved multi-item/multi-stall order has one digital ticket. Redeeming it represents issuance of every physical food-ticket quantity in that order. Partial redemption is not supported and repeat redemption remains blocked.
+
+Best-Selling Stall means greatest total item quantity in `PAYMENT_APPROVED` orders. Approved stall revenue is the first tie-breaker; every leader is returned when quantity and revenue remain tied. The compatibility response is `{ stall, leaders, isTie }`.
+
+After orders exist, deactivate Stalls/Foods or make StallFood entries unavailable instead of hard-deleting referenced data. StallFood ticket-limit updates must enforce `newTicketLimit >= reservedTickets + soldTickets`. Price and discount edits affect future orders only; historical order snapshots are never recalculated.
+
+Event settings retain the `current` singleton, `Asia/Yangon` timezone, and 60/30 defaults. Validation requires `preorderOpenAt < preorderCloseAt < eventDate`; there is no exact 24-hour constraint. Ordering is allowed only inside the schedule while `orderingEnabled` is true. `featureFlags.memoriesEnabled`, `featureFlags.eventPageEnabled`, and `featureFlags.crushLettersEnabled` are independently patchable, default false, preserve omitted siblings, and reject unknown keys. The Crush Letter flag controls new submissions only, not approved public listing. Payment review/approval/rejection and ticket redemption have no EventConfig switch. Updates affect future operations and never rewrite historical orders. Canonical website notification types are `PAYMENT_APPROVED`, `PAYMENT_REJECTED`, `PAYMENT_REUPLOAD_REQUESTED`, `ORDER_EXPIRED`, and `PAYMENT_EVIDENCE_EXPIRED`.
+
+Admin clients should show confirmation dialogs before changing operational switches, but the API requires no confirmation flag. Confirmed launch dates are 8 September 2026 opening, 10 September 2026 closing, and 11 September 2026 event date in Myanmar Time; exact opening/closing times remain TBD. Two more explicit event-day flags are expected later, with names and behavior not yet defined.
 
 ## Customer-facing wording for the future frontend
 

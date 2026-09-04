@@ -22,10 +22,16 @@ export const assertOrderingOpen = (config, now = new Date()) => {
 export const presentEvent = (config, now = new Date(), includePayment = false) => ({
   eventName: config.eventName,
   eventDate: config.eventDate,
+  eventTimezone: config.eventTimezone,
   preorderOpenAt: config.preorderOpenAt,
   preorderCloseAt: config.preorderCloseAt,
   orderingEnabled: config.orderingEnabled,
   preorderStatus: derivePreorderStatus(config, now),
+  featureFlags: {
+    memoriesEnabled: config.featureFlags?.memoriesEnabled ?? false,
+    eventPageEnabled: config.featureFlags?.eventPageEnabled ?? false,
+    crushLettersEnabled: config.featureFlags?.crushLettersEnabled ?? false,
+  },
   orderReservationMinutes: config.orderReservationMinutes,
   paymentProofGraceMinutes: config.paymentProofGraceMinutes,
   ...(includePayment ? { kbzAccountName: config.kbzAccountName, kbzAccountNumber: config.kbzAccountNumber, paymentInstructions: config.paymentInstructions } : {}),
