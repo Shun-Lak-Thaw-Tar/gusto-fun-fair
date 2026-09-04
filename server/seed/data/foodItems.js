@@ -1,5 +1,6 @@
 export default [
-  { stallName: 'Demo Golden Bites', name: 'Classic Chicken Burger', description: 'Demo grilled chicken burger.', eventDayPrice: 5000, ticketLimit: 80, isAvailable: true },
+  { foodKey: 'demo-shared-chicken-burger', stallName: 'Demo Golden Bites', name: 'Classic Chicken Burger', description: 'Demo grilled chicken burger.', eventDayPrice: 5000, discount: { type: 'percentage', value: 10 }, ticketLimit: 80, isAvailable: true },
+  { foodKey: 'demo-shared-chicken-burger', stallName: 'Demo Tea Garden', name: 'Classic Chicken Burger', description: 'Demo grilled chicken burger.', eventDayPrice: 5500, discount: { type: 'percentage', value: 15 }, ticketLimit: 50, isAvailable: true },
   { stallName: 'Demo Golden Bites', name: 'Seasoned Fries', description: 'Demo crispy seasoned fries.', eventDayPrice: 2500, ticketLimit: 100, isAvailable: true },
   { stallName: 'Demo Tea Garden', name: 'Myanmar Milk Tea', description: 'Demo creamy tea.', eventDayPrice: 2500, ticketLimit: 120, isAvailable: true },
   { stallName: 'Demo Tea Garden', name: 'Lime Cooler', description: 'Demo sparkling lime drink.', eventDayPrice: 2000, ticketLimit: 60, isAvailable: false },

@@ -12,7 +12,8 @@ The Admin developer must reuse shared `pricingService`, `inventoryService`, `ord
 
 - Dashboard: implemented backend metrics endpoint
 - Stall Management: implemented create/edit/deactivate, details/sales, and owner-account management; no hard-delete route
-- Food Management: implemented create/edit/deactivate and atomic ticket-limit validation
+- Food Catalog: implemented reusable Food identity create/list/edit/deactivate
+- Stall Menu Management: implemented StallFood assignment, per-entry price/discount/availability, and atomic ticket-limit validation
 - Order Management: implemented inspect/filter only; no arbitrary status endpoint
 - Pending Payment Management and Payment Review: call the existing shared review lifecycle
 - Ticket Verification and Redemption: implemented whole-order lookup/redemption in shared and Admin namespaces
@@ -48,7 +49,7 @@ One approved order receives one digital ticket even when it contains several foo
 - Digital Tickets Redeemed: Ticket records with `status = REDEEMED`
 - Physical Tickets Issued: sum associated order quantities for redeemed tickets
 - Active Stalls: `isActive = true`
-- Available Food Items: available foods belonging to active stalls
+- Available Food Items: available StallFood entries whose Food and Stall are active
 
 Digital ticket count and physical food-ticket quantity are different metrics.
 
@@ -58,9 +59,9 @@ Sales per stall/food use immutable OrderItem snapshots from `PAYMENT_APPROVED` o
 
 ## Data-management safety
 
-Before real orders exist, demo stalls/foods may be removed when preparing the real catalog. After orders exist, normally set `Stall.isActive = false` or `FoodItem.isAvailable = false`; do not hard-delete referenced records. Hard deletion, if ever offered, is limited to demonstrably unused development records.
+Before real orders exist, demo stalls/foods may be removed when preparing the real catalog. After orders exist, normally set `Stall.isActive = false`, `Food.isActive = false`, or `StallFood.isAvailable = false`; do not hard-delete referenced records. Hard deletion, if ever offered, is limited to demonstrably unused development records.
 
-Food ticket limits must satisfy `newTicketLimit >= reservedTickets + soldTickets`, enforced server-side. Price/discount changes affect future orders only; existing `unitPrice`, `subtotal`, and `totalAmount` snapshots must never be recalculated.
+StallFood ticket limits must satisfy `newTicketLimit >= reservedTickets + soldTickets`, enforced server-side. Each menu entry owns its price and discount. Changes affect future orders only; existing `unitPrice`, `subtotal`, and `totalAmount` snapshots must never be recalculated.
 
 ## Event settings
 

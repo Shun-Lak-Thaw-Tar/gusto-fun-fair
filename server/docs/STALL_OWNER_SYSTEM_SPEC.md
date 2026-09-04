@@ -18,7 +18,7 @@ Owners cannot view customer details, payment proof, other stalls, other stalls' 
 
 - `GET /api/stall-owner/dashboard` — safe owner identity, linked stall, approved revenue and sold quantity
 - `GET /api/stall-owner/stall` — linked stall information and stable slug
-- `GET /api/stall-owner/foods` — only linked-stall foods with calculated preorder price and remaining tickets
+- `GET /api/stall-owner/foods` — only linked-stall StallFood entries, populated with generic Food details and calculated preorder price/remaining tickets
 - `GET /api/stall-owner/sales` — approved-only summary and food breakdown using historical OrderItem snapshots
 - `GET /api/stall-owner/share` — event/stall/card data, food names, slug, and relative public path
 
@@ -26,7 +26,7 @@ The public `GET /api/stalls/by-slug/:slug` endpoint returns only an active stall
 
 ## Share and invitation-card data
 
-Slugs are readable, unique, generated at stall creation, and stable across stall-name edits. Duplicate names receive numeric suffixes. The share response supplies `/stalls/:slug`; it does not hard-code a deployment domain or generate a card image. The future React UI can render an invitation card from event name, stall name, batch, image reference, discount, food names, and public path.
+Slugs are readable, unique, generated at stall creation, and stable across stall-name edits. Duplicate names receive numeric suffixes. The share response supplies `/stalls/:slug`; it does not hard-code a deployment domain or generate a card image. The future React UI can render an invitation card from event name, stall name, batch, image reference, food names, and public path. Discounts are per StallFood, not stall-wide.
 
 ## Approved sales
 

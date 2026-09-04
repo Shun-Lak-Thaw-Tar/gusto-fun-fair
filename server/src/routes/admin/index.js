@@ -8,6 +8,7 @@ import foodRoutes from './foodRoutes.js';
 import orderRoutes from './orderRoutes.js';
 import paymentRoutes from './paymentRoutes.js';
 import stallRoutes from './stallRoutes.js';
+import stallFoodRoutes from './stallFoodRoutes.js';
 import statisticsRoutes from './statisticsRoutes.js';
 import ticketRoutes from './ticketRoutes.js';
 
@@ -16,6 +17,7 @@ router.use(requireAuth, requireAdmin);
 router.use('/dashboard', dashboardRoutes);
 router.use('/crush-letters', crushLetterRoutes);
 router.use('/stalls', stallRoutes);
+router.use('/stall-foods', stallFoodRoutes);
 router.use('/foods', foodRoutes);
 router.use('/orders', orderRoutes);
 router.use('/payments', paymentRoutes);

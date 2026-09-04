@@ -23,11 +23,11 @@ The Admin developer owns owner-account creation, password reset, enable/disable 
 
 The following are shared contracts and must not be casually renamed or restructured:
 
-- Models: `User`, `Stall`, `FoodItem`, `Order`, `Payment`, `Ticket`, `Redemption`, `Notification`, `EventConfig`
+- Models: `User`, `Stall`, `Food`, `StallFood`, legacy `FoodItem`, `Order`, `Payment`, `Ticket`, `Redemption`, `Notification`, `EventConfig`
 - Services: `pricingService`, `inventoryService`, `orderLifecycleService`, `paymentService`, `ticketService`, `eventService`, `stallSalesService`
 - Authentication/admin middleware, lifecycle enums, ticket statuses, EventConfig rules, and API contracts
 
-Controllers must call shared services instead of duplicating price, inventory, approval, rejection, ticket, or expiry logic. Coordinate before editing shared files and avoid editing the same shared files simultaneously.
+Controllers must call shared services instead of duplicating price, inventory, approval, rejection, ticket, or expiry logic. `Food` owns reusable identity; `StallFood` owns assignment, price, discount, availability, and inventory. New runtime code must not depend on legacy `FoodItem`, which is retained only for migration and historical compatibility. Coordinate before editing shared files and avoid editing the same shared files simultaneously.
 
 Admin work should stay primarily in `controllers/admin/*`, `routes/admin/*`, admin tests, and admin frontend. Customer work should stay primarily in customer-facing controllers/routes and customer frontend.
 

@@ -7,8 +7,8 @@ const stallSchema = new mongoose.Schema({
   batch: { type: String, required: true, trim: true, maxlength: 50 },
   description: { type: String, trim: true, maxlength: 500, default: '' },
   discount: {
-    type: { type: String, enum: ['percentage', 'fixed'], required: true },
-    value: { type: Number, required: true, min: 0, validate: { validator(value) { return this.type !== 'percentage' || value <= 100; }, message: 'Percentage discount cannot exceed 100' } },
+    type: { type: String, enum: ['percentage', 'fixed'], default: 'percentage' },
+    value: { type: Number, default: 0, min: 0, validate: { validator(value) { return this.type !== 'percentage' || value <= 100; }, message: 'Percentage discount cannot exceed 100' } },
   },
   image: mediaSchemaDefinition,
   isActive: { type: Boolean, default: true },

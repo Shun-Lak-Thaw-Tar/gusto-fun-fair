@@ -4,7 +4,8 @@ import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 import app from '../src/app.js';
 import env from '../src/config/env.js';
-import FoodItem from '../src/models/FoodItem.js';
+import Food from '../src/models/Food.js';
+import StallFood from '../src/models/StallFood.js';
 import Order from '../src/models/Order.js';
 import Stall from '../src/models/Stall.js';
 import Ticket from '../src/models/Ticket.js';
@@ -25,11 +26,12 @@ test('Admin Dashboard metrics and authorization', async (t) => {
     { stallName: 'Dashboard B', batch: 'B', discount: { type: 'fixed', value: 0 }, isActive: true },
     { stallName: 'Dashboard Inactive', batch: 'C', discount: { type: 'fixed', value: 0 }, isActive: false },
   ]);
-  await FoodItem.create([
-    { stallId: stallA._id, name: 'Available A', eventDayPrice: 1000, ticketLimit: 10, isAvailable: true },
-    { stallId: stallB._id, name: 'Available B', eventDayPrice: 1000, ticketLimit: 10, isAvailable: true },
-    { stallId: stallA._id, name: 'Unavailable', eventDayPrice: 1000, ticketLimit: 10, isAvailable: false },
-    { stallId: inactiveStall._id, name: 'Inactive Stall Food', eventDayPrice: 1000, ticketLimit: 10, isAvailable: true },
+  const foods = await Food.create([{ name: 'Available A' }, { name: 'Available B' }, { name: 'Unavailable' }, { name: 'Inactive Stall Food' }]);
+  await StallFood.create([
+    { stallId: stallA._id, foodId: foods[0]._id, eventDayPrice: 1000, discount: { type: 'fixed', value: 0 }, ticketLimit: 10, isAvailable: true },
+    { stallId: stallB._id, foodId: foods[1]._id, eventDayPrice: 1000, discount: { type: 'fixed', value: 0 }, ticketLimit: 10, isAvailable: true },
+    { stallId: stallA._id, foodId: foods[2]._id, eventDayPrice: 1000, discount: { type: 'fixed', value: 0 }, ticketLimit: 10, isAvailable: false },
+    { stallId: inactiveStall._id, foodId: foods[3]._id, eventDayPrice: 1000, discount: { type: 'fixed', value: 0 }, ticketLimit: 10, isAvailable: true },
   ]);
 
   const makeOrder = (status, sequence, totalQuantity = 1, totalAmount = 1000, stall = stallA) => ({

@@ -1,4 +1,5 @@
-import FoodItem from '../../models/FoodItem.js';
+import Food from '../../models/Food.js';
+import StallFood from '../../models/StallFood.js';
 import Order from '../../models/Order.js';
 import Stall from '../../models/Stall.js';
 import Ticket from '../../models/Ticket.js';
@@ -21,7 +22,7 @@ export const getDashboard = async (_req, res) => {
     Ticket.countDocuments({ status: 'REDEEMED' }),
     Ticket.aggregate([{ $match: { status: 'REDEEMED' } }, { $lookup: { from: Order.collection.name, localField: 'orderId', foreignField: '_id', as: 'order' } }, { $unwind: '$order' }, { $group: { _id: null, total: { $sum: '$order.totalQuantity' } } }]),
     Stall.countDocuments({ isActive: true }),
-    FoodItem.aggregate([{ $match: { isAvailable: true } }, { $lookup: { from: Stall.collection.name, localField: 'stallId', foreignField: '_id', as: 'stall' } }, { $unwind: '$stall' }, { $match: { 'stall.isActive': true } }, { $count: 'total' }]),
+    StallFood.aggregate([{ $match: { isAvailable: true } }, { $lookup: { from: Stall.collection.name, localField: 'stallId', foreignField: '_id', as: 'stall' } }, { $unwind: '$stall' }, { $lookup: { from: Food.collection.name, localField: 'foodId', foreignField: '_id', as: 'food' } }, { $unwind: '$food' }, { $match: { 'stall.isActive': true, 'food.isActive': true } }, { $count: 'total' }]),
   ]);
 
   res.json({ dashboard: {
