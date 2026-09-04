@@ -6,7 +6,8 @@ import mongoose from 'mongoose';
 import app from '../src/app.js';
 import env from '../src/config/env.js';
 import EventConfig from '../src/models/EventConfig.js';
-import FoodItem from '../src/models/FoodItem.js';
+import Food from '../src/models/Food.js';
+import StallFood from '../src/models/StallFood.js';
 import Order from '../src/models/Order.js';
 import Stall from '../src/models/Stall.js';
 import Ticket from '../src/models/Ticket.js';
@@ -23,6 +24,11 @@ test('Backend V1.3 Admin and Stall Owner system', async (t) => {
   const [admin, user] = await User.create([{ name: 'V13 Admin', nameNormalized: 'v13 admin', passwordHash: 'test', role: 'admin' }, { name: 'V13 User', nameNormalized: 'v13 user', passwordHash: 'test', role: 'user' }]);
   const server = app.listen(0);
   await new Promise((resolve) => server.once('listening', resolve));
+  t.after(async () => {
+    await new Promise((resolve) => server.close(resolve));
+    await mongoose.connection.dropDatabase();
+    await mongoose.disconnect();
+  });
   const base = `http://127.0.0.1:${server.address().port}/api`;
   const token = (account) => jwt.sign({ role: account.role }, env.jwtSecret, { subject: String(account._id), expiresIn: '10m' });
   const adminHeaders = { Authorization: `Bearer ${token(admin)}` };
@@ -34,14 +40,14 @@ test('Backend V1.3 Admin and Stall Owner system', async (t) => {
 
   await t.test('unauthenticated callers cannot manage stalls', async () => assert.equal((await request('/admin/stalls')).status, 401));
   await t.test('normal users cannot manage stalls', async () => assert.equal((await request('/admin/stalls', { headers: userHeaders })).status, 403));
-  const stallBody = { stallName: 'Owner Food Hub', batch: 'Batch 13', description: 'Test stall', discount: { type: 'percentage', value: 10 }, image: { url: '/stall.jpg', provider: 'test', storageKey: '' } };
+  const stallBody = { stallName: 'Owner Food Hub', batch: 'Batch 13', description: 'Test stall', image: { url: '/stall.jpg', provider: 'test', storageKey: '' } };
   const stallAResponse = await request('/admin/stalls', { method: 'POST', headers: adminHeaders, body: stallBody });
   const stallA = stallAResponse.body.stall;
   await t.test('Admin creates a stall with a generated slug', () => { assert.equal(stallAResponse.status, 201); assert.equal(stallA.slug, 'owner-food-hub'); });
   const stallBResponse = await request('/admin/stalls', { method: 'POST', headers: adminHeaders, body: { ...stallBody, batch: 'Batch 14' } });
   const stallB = stallBResponse.body.stall;
   await t.test('duplicate stall names receive unique slugs', () => assert.equal(stallB.slug, 'owner-food-hub-2'));
-  await t.test('invalid stall discount is rejected', async () => assert.equal((await request('/admin/stalls', { method: 'POST', headers: adminHeaders, body: { ...stallBody, discount: { type: 'percentage', value: 101 } } })).status, 400));
+  await t.test('stall-wide discounts are rejected', async () => assert.equal((await request('/admin/stalls', { method: 'POST', headers: adminHeaders, body: { ...stallBody, discount: { type: 'percentage', value: 10 } } })).status, 400));
   await t.test('Admin lists a dynamic number of stalls', async () => assert.equal((await request('/admin/stalls', { headers: adminHeaders })).body.stalls.length, 2));
   const renamed = await request(`/admin/stalls/${stallA._id}`, { method: 'PATCH', headers: adminHeaders, body: { stallName: 'Renamed Owner Hub' } });
   await t.test('Admin edits a stall while its slug remains stable', () => { assert.equal(renamed.body.stall.stallName, 'Renamed Owner Hub'); assert.equal(renamed.body.stall.slug, stallA.slug); });
@@ -50,31 +56,36 @@ test('Backend V1.3 Admin and Stall Owner system', async (t) => {
   await t.test('no hard-delete Stall endpoint exists', async () => assert.equal((await request(`/admin/stalls/${stallA._id}`, { method: 'DELETE', headers: adminHeaders })).status, 404));
   await request(`/admin/stalls/${stallA._id}/status`, { method: 'PATCH', headers: adminHeaders, body: { isActive: true } });
 
-  const foodBody = { stallId: stallA._id, name: 'Owner Burger', description: 'Test food', eventDayPrice: 5000, ticketLimit: 10, isAvailable: true, image: { url: '/food.jpg' } };
-  await t.test('food creation rejects an invalid stall', async () => assert.equal((await request('/admin/foods', { method: 'POST', headers: adminHeaders, body: { ...foodBody, stallId: '700000000000000000000099' } })).status, 400));
-  await t.test('food creation rejects client preorderPrice', async () => assert.equal((await request('/admin/foods', { method: 'POST', headers: adminHeaders, body: { ...foodBody, preorderPrice: 1 } })).status, 400));
+  const foodBody = { name: 'Owner Burger', description: 'Test food', category: 'Main', isActive: true, image: { url: '/food.jpg' } };
+  await t.test('generic food creation rejects stall-owned fields', async () => assert.equal((await request('/admin/foods', { method: 'POST', headers: adminHeaders, body: { ...foodBody, stallId: stallA._id } })).status, 400));
+  await t.test('generic food creation rejects pricing fields', async () => assert.equal((await request('/admin/foods', { method: 'POST', headers: adminHeaders, body: { ...foodBody, eventDayPrice: 1 } })).status, 400));
   const foodAResponse = await request('/admin/foods', { method: 'POST', headers: adminHeaders, body: foodBody });
   const foodA = foodAResponse.body.food;
-  const foodBResponse = await request('/admin/foods', { method: 'POST', headers: adminHeaders, body: { ...foodBody, stallId: stallB._id, name: 'Other Tea', eventDayPrice: 2500 } });
+  const foodBResponse = await request('/admin/foods', { method: 'POST', headers: adminHeaders, body: { ...foodBody, name: 'Other Tea' } });
   const foodB = foodBResponse.body.food;
-  await t.test('Admin creates food with calculated preorder price', () => { assert.equal(foodAResponse.status, 201); assert.equal(foodA.preorderPrice, 4500); });
-  await FoodItem.updateOne({ _id: foodA._id }, { reservedTickets: 2, soldTickets: 3 });
-  await t.test('ticket limit below reserved plus sold is rejected', async () => assert.equal((await request(`/admin/foods/${foodA._id}`, { method: 'PATCH', headers: adminHeaders, body: { ticketLimit: 4 } })).status, 409));
-  await t.test('ticket limit may decrease to reserved plus sold', async () => assert.equal((await request(`/admin/foods/${foodA._id}`, { method: 'PATCH', headers: adminHeaders, body: { ticketLimit: 5 } })).status, 200));
-  await t.test('ticket limit may increase', async () => assert.equal((await request(`/admin/foods/${foodA._id}`, { method: 'PATCH', headers: adminHeaders, body: { ticketLimit: 20 } })).body.food.ticketLimit, 20));
-  await t.test('Admin edits and disables food', async () => { const result = await request(`/admin/foods/${foodA._id}`, { method: 'PATCH', headers: adminHeaders, body: { eventDayPrice: 6000, isAvailable: false } }); assert.equal(result.body.food.preorderPrice, 5400); assert.equal(result.body.food.isAvailable, false); });
-  await t.test('disabled food disappears from public ordering', async () => assert.equal((await request('/foods')).body.foods.some((food) => food._id === foodA._id), false));
-  await request(`/admin/foods/${foodA._id}`, { method: 'PATCH', headers: adminHeaders, body: { isAvailable: true } });
+  await t.test('Admin creates independent generic foods', () => assert.equal(foodAResponse.status, 201));
+  const stallFoodAResponse = await request('/admin/stall-foods', { method: 'POST', headers: adminHeaders, body: { stallId: stallA._id, foodId: foodA._id, eventDayPrice: 5000, discount: { type: 'percentage', value: 10 }, ticketLimit: 10, isAvailable: true } });
+  const stallFoodA = stallFoodAResponse.body.stallFood;
+  const stallFoodBResponse = await request('/admin/stall-foods', { method: 'POST', headers: adminHeaders, body: { stallId: stallB._id, foodId: foodB._id, eventDayPrice: 2500, discount: { type: 'fixed', value: 500 }, ticketLimit: 10, isAvailable: true } });
+  const stallFoodB = stallFoodBResponse.body.stallFood;
+  await t.test('Admin creates StallFood with calculated preorder price', () => { assert.equal(stallFoodAResponse.status, 201); assert.equal(stallFoodA.preorderPrice, 4500); });
+  await StallFood.updateOne({ _id: stallFoodA._id }, { reservedTickets: 2, soldTickets: 3 });
+  await t.test('ticket limit below reserved plus sold is rejected', async () => assert.equal((await request(`/admin/stall-foods/${stallFoodA._id}`, { method: 'PATCH', headers: adminHeaders, body: { ticketLimit: 4 } })).status, 409));
+  await t.test('ticket limit may decrease to reserved plus sold', async () => assert.equal((await request(`/admin/stall-foods/${stallFoodA._id}`, { method: 'PATCH', headers: adminHeaders, body: { ticketLimit: 5 } })).status, 200));
+  await t.test('ticket limit may increase', async () => assert.equal((await request(`/admin/stall-foods/${stallFoodA._id}`, { method: 'PATCH', headers: adminHeaders, body: { ticketLimit: 20 } })).body.stallFood.ticketLimit, 20));
+  await t.test('Admin edits and disables StallFood', async () => { const result = await request(`/admin/stall-foods/${stallFoodA._id}`, { method: 'PATCH', headers: adminHeaders, body: { eventDayPrice: 6000, isAvailable: false } }); assert.equal(result.body.stallFood.preorderPrice, 5400); assert.equal(result.body.stallFood.isAvailable, false); });
+  await t.test('disabled StallFood disappears from public ordering', async () => assert.equal((await request('/foods')).body.foods.some((food) => food.stallFoodId === stallFoodA._id), false));
+  await request(`/admin/stall-foods/${stallFoodA._id}`, { method: 'PATCH', headers: adminHeaders, body: { isAvailable: true } });
 
-  const orderItem = (stall, food, quantity, subtotal) => ({ stallId: stall._id, foodItemId: food._id, stallName: stall.stallName, foodName: food.name, quantity, unitPrice: subtotal / quantity, subtotal });
+  const orderItem = (stall, food, stallFood, quantity, subtotal) => ({ stallId: stall._id, foodId: food._id, stallFoodId: stallFood._id, stallName: stall.stallName, foodName: food.name, quantity, unitPrice: subtotal / quantity, subtotal });
   const makeOrder = (status, reference, items) => ({ userId: user._id, items, totalQuantity: items.reduce((sum, item) => sum + item.quantity, 0), totalAmount: items.reduce((sum, item) => sum + item.subtotal, 0), status, inventoryStatus: status === 'PAYMENT_APPROVED' ? 'SOLD' : 'RESERVED', paymentReference: reference, reservationExpiresAt: new Date(Date.now() + 60_000) });
   const [approvedOrder, secondApproved, submittedOrder] = await Order.create([
-    makeOrder('PAYMENT_APPROVED', 'FF-ORDER-V13A', [orderItem(stallA, foodA, 2, 9000), orderItem(stallB, foodB, 4, 8000)]),
-    makeOrder('PAYMENT_APPROVED', 'FF-ORDER-V13B', [orderItem(stallA, foodA, 1, 7000)]),
-    makeOrder('PAYMENT_SUBMITTED', 'FF-ORDER-V13C', [orderItem(stallA, foodA, 10, 100)]),
+    makeOrder('PAYMENT_APPROVED', 'FF-ORDER-V13A', [orderItem(stallA, foodA, stallFoodA, 2, 9000), orderItem(stallB, foodB, stallFoodB, 4, 8000)]),
+    makeOrder('PAYMENT_APPROVED', 'FF-ORDER-V13B', [orderItem(stallA, foodA, stallFoodA, 1, 7000)]),
+    makeOrder('PAYMENT_SUBMITTED', 'FF-ORDER-V13C', [orderItem(stallA, foodA, stallFoodA, 10, 100)]),
   ]);
   const snapshot = (await Order.findById(approvedOrder._id)).items[0].unitPrice;
-  await request(`/admin/foods/${foodA._id}`, { method: 'PATCH', headers: adminHeaders, body: { eventDayPrice: 8000 } });
+  await request(`/admin/stall-foods/${stallFoodA._id}`, { method: 'PATCH', headers: adminHeaders, body: { eventDayPrice: 8000 } });
   await t.test('food edits do not alter historical order prices', async () => assert.equal((await Order.findById(approvedOrder._id)).items[0].unitPrice, snapshot));
   await t.test('Admin lists all orders', async () => assert.equal((await request('/admin/orders', { headers: adminHeaders })).body.orders.length, 3));
   await t.test('Admin filters orders by status', async () => { const result = await request('/admin/orders?status=PAYMENT_SUBMITTED', { headers: adminHeaders }); assert.equal(result.body.orders.length, 1); assert.equal(result.body.orders[0].status, 'PAYMENT_SUBMITTED'); });
@@ -84,7 +95,7 @@ test('Backend V1.3 Admin and Stall Owner system', async (t) => {
 
   const stallStats = await request('/admin/statistics/stalls', { headers: adminHeaders });
   await t.test('stall statistics count approved snapshots only', () => { const a = stallStats.body.stalls.find((stall) => stall.stallId === stallA._id); assert.equal(a.approvedQuantity, 3); assert.equal(a.approvedRevenue, 16000); });
-  await t.test('food statistics count approved snapshots only', async () => { const result = await request('/admin/statistics/foods', { headers: adminHeaders }); const a = result.body.foods.find((food) => food.foodItemId === foodA._id); assert.equal(a.approvedQuantity, 3); assert.equal(a.approvedRevenue, 16000); });
+  await t.test('food statistics count approved snapshots only', async () => { const result = await request('/admin/statistics/foods', { headers: adminHeaders }); const a = result.body.foods.find((food) => food.stallFoodId === stallFoodA._id); assert.equal(a.approvedQuantity, 3); assert.equal(a.approvedRevenue, 16000); });
   await t.test('statistics overview is available', async () => assert.equal((await request('/admin/statistics/overview', { headers: adminHeaders })).status, 200));
 
   await t.test('Admin reads EventConfig', async () => assert.equal((await request('/admin/event', { headers: adminHeaders })).body.event.configKey, 'current'));
@@ -114,7 +125,7 @@ test('Backend V1.3 Admin and Stall Owner system', async (t) => {
   await t.test('Admin is not treated as a stall owner', async () => assert.equal((await request('/stall-owner/dashboard', { headers: adminHeaders })).status, 403));
   await t.test('owner dashboard returns only linked stall summary', async () => { const result = await request('/stall-owner/dashboard', { headers: ownerHeaders }); assert.equal(result.body.stall._id, stallA._id); assert.deepEqual(result.body.summary, { approvedRevenue: 16000, foodTicketsSold: 3 }); });
   await t.test('owner sees own stall', async () => assert.equal((await request('/stall-owner/stall', { headers: ownerHeaders })).body.stall._id, stallA._id));
-  await t.test('owner sees only own foods', async () => { const foods = (await request('/stall-owner/foods', { headers: ownerHeaders })).body.foods; assert.equal(foods.every((food) => food.stallId === stallA._id), true); assert.equal(foods.some((food) => food._id === foodB._id), false); });
+  await t.test('owner sees only own foods', async () => { const foods = (await request('/stall-owner/foods', { headers: ownerHeaders })).body.foods; assert.equal(foods.every((food) => food.stallId === stallA._id), true); assert.equal(foods.some((food) => food.stallFoodId === stallFoodB._id), false); });
   await t.test('owner sales use approved historical stall items only', async () => { const result = await request('/stall-owner/sales', { headers: ownerHeaders }); assert.deepEqual(result.body.summary, { approvedRevenue: 16000, foodTicketsSold: 3 }); assert.equal(result.body.foods.length, 1); });
   await t.test('private owner API accepts no arbitrary stall ID', async () => assert.equal((await request(`/stall-owner/stalls/${stallB._id}`, { headers: ownerHeaders })).status, 404));
   await t.test('owner responses expose no customer or payment proof', async () => { const text = JSON.stringify((await request('/stall-owner/dashboard', { headers: ownerHeaders })).body); assert.doesNotMatch(text, /passwordHash|paymentProof|customer/i); });
@@ -136,7 +147,4 @@ test('Backend V1.3 Admin and Stall Owner system', async (t) => {
   await t.test('ticket linked to non-approved order cannot be redeemed', async () => assert.equal((await request(`/admin/tickets/${invalidTicket.code}/redeem`, { method: 'POST', headers: adminHeaders })).status, 409));
   await t.test('old compatible ticket lookup remains available', async () => assert.equal((await request(`/tickets/${activeTicket.code}`, { headers: adminHeaders })).status, 200));
 
-  await new Promise((resolve) => server.close(resolve));
-  await mongoose.connection.dropDatabase();
-  await mongoose.disconnect();
 });

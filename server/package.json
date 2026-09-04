@@ -9,6 +9,7 @@
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "seed:demo": "node seed/seedDemo.js",
+    "migrate:foods": "node scripts/migrateFoodItems.js",
     "test": "node --test"
   },
   "dependencies": {

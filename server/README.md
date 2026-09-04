@@ -1,4 +1,4 @@
-# Fun Fair Backend V1.1
+# Fun Fair Backend V1.4
 
 Node.js 24, Express, MongoDB, and Mongoose REST API foundation for the college Fun Fair food pre-order and digital ticketing system.
 
@@ -44,7 +44,7 @@ Registration currently uses a unique name plus password; names are matched case-
 - Public anonymous Crush Letter submission and approved-only paginated listing
 - Admin payment review and best-selling-stall statistics
 
-Order requests contain only food item IDs and quantities. Duplicate IDs are consolidated, the server calculates authoritative price snapshots, and conditional MongoDB updates immediately reserve tickets. Reservations last for the configurable 60-minute demo default. After external KBZ payment, the customer must declare payment before that deadline and then has the configurable 30-minute demo grace period to submit proof. Declaration permanently locks normal user cancellation because payments are non-refundable.
+Order requests contain only canonical `stallFoodId` values and quantities. Duplicate IDs are consolidated, the server calculates authoritative price snapshots from the selected `StallFood`, and conditional MongoDB updates immediately reserve that stall-specific inventory. Deprecated `foodItemId` input is accepted only when it maps unambiguously to migrated data. Reservations last for the configurable 60-minute demo default. After external KBZ payment, the customer must declare payment before that deadline and then has the configurable 30-minute demo grace period to submit proof. Declaration permanently locks normal user cancellation because payments are non-refundable.
 
 Expired undeclared orders become `EXPIRED`; declared orders without timely proof become `PAYMENT_EVIDENCE_EXPIRED`. Both release inventory exactly once. Submitted proofs remain reserved without timer expiry until an admin approves or rejects them. Approval converts reserved quantities to sold without changing remaining availability and creates one digital ticket. Rejection releases inventory, creates no ticket, and does not trigger or imply a refund. Only approved purchases count toward best-selling statistics.
 
@@ -66,11 +66,14 @@ Launch preparation confirms preorder dates of 8 September 2026 through 10 Septem
 
 **Production readiness:** `DEMO Fun Fair 2030`, demo KBZ details, demo stalls, and demo foods must be replaced and verified before real pre-order sales open. Once customer orders exist, deactivate referenced stalls/foods instead of hard-deleting them.
 
-Atomic conditional updates prevent any individual food item from exceeding its ticket limit. Multi-item orders compensate already-reserved items if a later reservation fails. A standalone MongoDB server cannot provide true multi-document ACID guarantees across several foods, the order, payment, notification, and ticket; transaction-capable replica-set or sharded deployment is required for that stronger guarantee.
+V1.4 separates reusable `Food` identity from the `StallFood` sellable relationship. Each relationship owns its price, discount, availability, and ticket inventory, so one Food can be offered by multiple stalls independently. See [docs/FOOD_STALLFOOD_DATA_MODEL.md](docs/FOOD_STALLFOOD_DATA_MODEL.md).
+
+Atomic conditional updates prevent any individual StallFood entry from exceeding its ticket limit. Multi-item orders compensate already-reserved items if a later reservation fails. A standalone MongoDB server cannot provide true multi-document ACID guarantees across several menu entries, the order, payment, notification, and ticket; transaction-capable replica-set or sharded deployment is required for that stronger guarantee.
 
 ## Scripts
 
 - `npm run dev` — development server with automatic restart
 - `npm start` — production-style server start
 - `npm run seed:demo` — safe development demo upsert
+- `npm run migrate:foods` — idempotently migrate legacy FoodItem data (production requires `ALLOW_FOOD_MIGRATION=true`)
 - `npm test` — unit tests

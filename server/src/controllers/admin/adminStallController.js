@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
-import FoodItem from '../../models/FoodItem.js';
+import StallFood from '../../models/StallFood.js';
 import Stall from '../../models/Stall.js';
 import User from '../../models/User.js';
 import ApiError from '../../utils/ApiError.js';
@@ -8,11 +8,7 @@ import { createStall as createStallRecord } from '../../services/stallService.js
 import { getStallSales } from '../../services/stallSalesService.js';
 
 const mediaSchema = z.object({ url: z.string().trim().optional(), storageKey: z.string().trim().optional(), provider: z.string().trim().optional() }).strict();
-const discountSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('percentage'), value: z.number().min(0).max(100) }).strict(),
-  z.object({ type: z.literal('fixed'), value: z.number().min(0) }).strict(),
-]);
-const createSchema = z.object({ stallName: z.string().trim().min(1).max(100), batch: z.string().trim().min(1).max(50), description: z.string().trim().max(500).optional(), discount: discountSchema, image: mediaSchema.optional(), isActive: z.boolean().optional(), slug: z.string().trim().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).optional() }).strict();
+const createSchema = z.object({ stallName: z.string().trim().min(1).max(100), batch: z.string().trim().min(1).max(50), description: z.string().trim().max(500).optional(), image: mediaSchema.optional(), isActive: z.boolean().optional(), slug: z.string().trim().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).optional() }).strict();
 const updateSchema = createSchema.omit({ slug: true }).partial().refine((value) => Object.keys(value).length > 0, { message: 'At least one field is required' });
 const ownerCredentialsSchema = z.object({ name: z.string().trim().min(2).max(50), password: z.string().min(8).max(128) }).strict();
 const passwordSchema = z.object({ password: z.string().min(8).max(128) }).strict();
@@ -24,7 +20,7 @@ export const listStalls = async (_req, res) => res.json({ stalls: await Stall.fi
 export const getStall = async (req, res) => {
   const stall = await Stall.findById(req.params.id);
   if (!stall) throw new ApiError(404, 'Stall not found');
-  const [foods, sales, owner] = await Promise.all([FoodItem.find({ stallId: stall._id }).sort({ name: 1 }).lean(), getStallSales(stall._id), User.findOne({ role: 'stall_owner', stallId: stall._id })]);
+  const [foods, sales, owner] = await Promise.all([StallFood.find({ stallId: stall._id }).populate('foodId', 'name description category image isActive').lean(), getStallSales(stall._id), User.findOne({ role: 'stall_owner', stallId: stall._id })]);
   res.json({ stall, foods, sales, owner: ownerView(owner) });
 };
 export const createStall = async (req, res) => res.status(201).json({ stall: await createStallRecord(parse(createSchema, req.body, 'Invalid stall data')) });

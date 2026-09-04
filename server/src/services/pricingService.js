@@ -9,13 +9,13 @@ export const calculatePreorderPrice = (eventDayPrice, discount) => {
   return Math.max(0, Math.round(eventDayPrice - reduction));
 };
 
-export const priceOrderItems = (requestedItems, foodItems) => {
-  const foodsById = new Map(foodItems.map((food) => [String(food._id), food]));
-  return requestedItems.map(({ foodItemId, quantity }) => {
-    const food = foodsById.get(String(foodItemId));
-    if (!food || !food.stallId || !food.isAvailable || !food.stallId.isActive) throw new ApiError(400, `Food item ${foodItemId} is unavailable`);
+export const priceOrderItems = (requestedItems, stallFoods) => {
+  const foodsById = new Map(stallFoods.map((entry) => [String(entry._id), entry]));
+  return requestedItems.map(({ stallFoodId, quantity }) => {
+    const entry = foodsById.get(String(stallFoodId));
+    if (!entry || !entry.stallId || !entry.foodId || !entry.isAvailable || !entry.stallId.isActive || !entry.foodId.isActive) throw new ApiError(400, `Stall food ${stallFoodId} is unavailable`);
     if (!Number.isInteger(quantity) || quantity < 1) throw new ApiError(400, 'Quantity must be a positive integer');
-    const unitPrice = calculatePreorderPrice(food.eventDayPrice, food.stallId.discount);
-    return { stallId: food.stallId._id, foodItemId: food._id, stallName: food.stallId.stallName, foodName: food.name, quantity, unitPrice, subtotal: unitPrice * quantity };
+    const unitPrice = calculatePreorderPrice(entry.eventDayPrice, entry.discount);
+    return { stallFoodId: entry._id, foodId: entry.foodId._id, stallId: entry.stallId._id, stallName: entry.stallId.stallName, foodName: entry.foodId.name, quantity, unitPrice, subtotal: unitPrice * quantity };
   });
 };

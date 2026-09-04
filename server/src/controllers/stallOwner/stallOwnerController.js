@@ -1,5 +1,5 @@
 import EventConfig from '../../models/EventConfig.js';
-import FoodItem from '../../models/FoodItem.js';
+import StallFood from '../../models/StallFood.js';
 import Stall from '../../models/Stall.js';
 import ApiError from '../../utils/ApiError.js';
 import { ticketsRemaining } from '../../services/inventoryService.js';
@@ -14,8 +14,8 @@ const getOwnedStall = async (user) => {
 const getOwnedFoods = async (user) => {
   const stall = await Stall.findById(user.stallId).lean();
   if (!stall) throw new ApiError(404, 'Linked stall not found');
-  const foods = await FoodItem.find({ stallId: user.stallId }).sort({ name: 1 }).lean();
-  return foods.map(({ reservedTickets: _reserved, soldTickets: _sold, ...food }) => ({ ...food, preorderPrice: calculatePreorderPrice(food.eventDayPrice, stall.discount), ticketsRemaining: ticketsRemaining(food) }));
+  const foods = await StallFood.find({ stallId: user.stallId }).populate('foodId', 'name description category image isActive').lean();
+  return foods.map(({ reservedTickets: _reserved, soldTickets: _sold, ...entry }) => ({ ...entry, stallFoodId: entry._id, food: entry.foodId, preorderPrice: calculatePreorderPrice(entry.eventDayPrice, entry.discount), ticketsRemaining: ticketsRemaining(entry) }));
 };
 
 export const getDashboard = async (req, res) => {
@@ -26,7 +26,7 @@ export const getMyStall = async (req, res) => res.json({ stall: await getOwnedSt
 export const getMyFoods = async (req, res) => res.json({ foods: await getOwnedFoods(req.user) });
 export const getMySales = async (req, res) => res.json(await getStallSales(req.user.stallId));
 export const getShareData = async (req, res) => {
-  const [stall, foods, event] = await Promise.all([getOwnedStall(req.user), FoodItem.find({ stallId: req.user.stallId, isAvailable: true }).sort({ name: 1 }).select('name').lean(), EventConfig.findOne({ configKey: 'current' }).select('eventName').lean()]);
+  const [stall, foods, event] = await Promise.all([getOwnedStall(req.user), StallFood.find({ stallId: req.user.stallId, isAvailable: true }).populate({ path: 'foodId', match: { isActive: true }, select: 'name' }).lean(), EventConfig.findOne({ configKey: 'current' }).select('eventName').lean()]);
   const publicPath = `/stalls/${stall.slug}`;
-  res.json({ share: { eventName: event?.eventName || '', stallName: stall.stallName, batch: stall.batch, image: stall.image, discount: stall.discount, foodNames: foods.map((food) => food.name), slug: stall.slug, publicPath } });
+  res.json({ share: { eventName: event?.eventName || '', stallName: stall.stallName, batch: stall.batch, image: stall.image, foodNames: foods.filter((entry) => entry.foodId).map((entry) => entry.foodId.name), slug: stall.slug, publicPath } });
 };

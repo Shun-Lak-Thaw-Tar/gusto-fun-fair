@@ -1,4 +1,4 @@
-# Fun Fair Backend V1.1 API Contract
+# Fun Fair Backend V1.4 API Contract
 
 All JSON errors use `{ "error": { "message": "..." } }`. Protected endpoints require `Authorization: Bearer <JWT>`. IDs below are MongoDB IDs. Payment proof objects remain provider-neutral: `{ "url": "...", "storageKey": "...", "provider": "..." }`.
 
@@ -18,7 +18,7 @@ Return active stalls.
 
 ### `GET /api/foods` and `GET /api/foods/:id` — public
 
-Return available foods, authoritative calculated `preorderPrice`, `ticketLimit`, and calculated `ticketsRemaining`. Internal `reservedTickets` and `soldTickets` counters are not exposed. `GET /api/foods?stallId=<id>` filters by stall.
+Return available sellable `StallFood` entries enriched with `stallFoodId`, `stallId`, `foodId`, `stallName`, nested generic `food`, authoritative `eventDayPrice`, relationship-owned `discount`, calculated `preorderPrice`, `ticketLimit`, and `ticketsRemaining`. Internal `reservedTickets` and `soldTickets` are not exposed. Filters are `?stallId=<id>` and `?foodId=<id>`; the detail ID is a `stallFoodId`.
 
 ## Crush Letters
 
@@ -37,10 +37,10 @@ Returns only `APPROVED` letters, newest first, with `id`, `recipientName`, `mess
 Request:
 
 ```json
-{ "items": [{ "foodItemId": "...", "quantity": 2 }] }
+{ "items": [{ "stallFoodId": "...", "quantity": 2 }] }
 ```
 
-Duplicate food IDs are consolidated. Client prices, totals, names, discounts, remaining counts, and roles are ignored. The event must be enabled and current time must satisfy `preorderOpenAt <= now < preorderCloseAt`. Each food and stall must be active/available.
+Duplicate StallFood IDs are consolidated. Unknown fields—including client prices, totals, names, discounts, and remaining counts—are rejected. Deprecated `foodItemId` may temporarily replace `stallFoodId` only when it maps to migrated data; clients must never send both. The event must be enabled and current time must satisfy `preorderOpenAt <= now < preorderCloseAt`. Each Food, Stall, and StallFood must be active/available.
 
 Returns `201` with the stored order plus checkout information: exact amount, `FF-ORDER-XXXXXX` payment reference, KBZ details/instructions, and `reservationExpiresAt`. Order state is `AWAITING_PAYMENT + RESERVED`. The demo reservation duration is 60 minutes. Important errors: `400` malformed/missing items, `409` event unavailable or insufficient inventory, `401` unauthenticated, `503` missing current event configuration.
 
@@ -90,7 +90,7 @@ Business-sensitive operations run idempotent cleanup:
 - `PAYMENT_DECLARED + RESERVED` at/after `paymentProofExpiresAt` becomes `PAYMENT_EVIDENCE_EXPIRED + RELEASED`.
 - `PAYMENT_SUBMITTED` is excluded from timer cleanup.
 
-Per-food reservation uses an atomic conditional update requiring `reservedTickets + soldTickets + requestedQuantity <= ticketLimit`. For multi-item orders, reservations run deterministically and earlier successful holds are explicitly compensated if a later item fails. Release and reserved-to-sold conversion also compensate earlier items when a later item operation fails. Repeated lifecycle transitions first conditionally claim the order state, preventing normal double-release/double-sale behavior.
+Per-StallFood reservation uses an atomic conditional update requiring `reservedTickets + soldTickets + requestedQuantity <= ticketLimit`. For multi-item orders, reservations run deterministically and earlier successful holds are explicitly compensated if a later item fails. Release and reserved-to-sold conversion also compensate earlier items when a later item operation fails. Repeated lifecycle transitions first conditionally claim the order state, preventing normal double-release/double-sale behavior.
 
 True multi-document ACID guarantees are unavailable on a standalone MongoDB deployment. A replica-set or sharded transaction-capable deployment is required to eliminate every possible process-crash window across multiple food documents and order/payment/ticket side effects.
 
@@ -120,8 +120,8 @@ No Admin or Stall Owner frontend is implemented. Memories and image-provider int
 - `GET|POST /api/admin/stalls/:stallId/owner` — view/create the one linked owner
 - `PATCH /api/admin/stalls/:stallId/owner/password` — reset owner password
 - `PATCH /api/admin/stalls/:stallId/owner/status` — enable/disable owner
-- `GET|POST /api/admin/foods` — list/filter/create foods
-- `GET|PATCH /api/admin/foods/:id` — view/edit with atomic `ticketLimit >= reserved + sold`
+- `GET|POST /api/admin/foods` and `GET|PATCH /api/admin/foods/:id` — generic Food catalog only
+- `GET|POST /api/admin/stall-foods` and `GET|PATCH /api/admin/stall-foods/:id` — assignment, price, per-entry discount, ticket limit, and availability; list filters support `stallId` and `foodId`
 - `GET /api/admin/orders?status=...` and `GET /api/admin/orders/:id` — safe listing/filter/details; no arbitrary status endpoint
 - `GET /api/admin/statistics/overview|stalls|foods|best-selling-stall`
 - `GET|PATCH /api/admin/event` — singleton schedule, manual ordering switch, payment settings, and explicit feature flags
@@ -131,7 +131,7 @@ No Admin or Stall Owner frontend is implemented. Memories and image-provider int
 - `PATCH /api/admin/crush-letters/:id/visibility` — `APPROVED ↔ HIDDEN`
 - `GET /api/admin/tickets/:code` and `POST /api/admin/tickets/:code/redeem` — dedicated namespace reusing shared behavior
 
-All write bodies are allow-listed and reject unknown fields. Food input never accepts authoritative `preorderPrice`; historical order snapshots are not updated.
+All write bodies are allow-listed and reject unknown fields. Food catalog input cannot contain selling fields. StallFood input never accepts `preorderPrice`, `reservedTickets`, `soldTickets`, or `ticketsRemaining`; historical order snapshots are not updated.
 
 ### Implemented Stall Owner routes
 
@@ -139,7 +139,7 @@ All require an active authenticated `stall_owner`; the linked stall comes from t
 
 - `GET /api/stall-owner/dashboard` — owner, linked stall, approved-sales summary
 - `GET /api/stall-owner/stall` — linked stall
-- `GET /api/stall-owner/foods` — linked-stall foods with calculated prices/remaining counts
+- `GET /api/stall-owner/foods` — linked-stall StallFood entries populated with Food details and calculated prices/remaining counts
 - `GET /api/stall-owner/sales` — approved-only summary and item breakdown
 - `GET /api/stall-owner/share` — event/stall/food names, slug, and relative public path
 
@@ -155,7 +155,7 @@ One approved multi-item/multi-stall order has one digital ticket. Redeeming it r
 
 Best-Selling Stall means greatest total item quantity in `PAYMENT_APPROVED` orders. Approved stall revenue is the first tie-breaker; every leader is returned when quantity and revenue remain tied. The compatibility response is `{ stall, leaders, isTie }`.
 
-After orders exist, deactivate stalls (`isActive = false`) and foods (`isAvailable = false`) instead of hard-deleting referenced data. Ticket-limit updates must enforce `newTicketLimit >= reservedTickets + soldTickets`. Price and discount edits affect future orders only; historical order snapshots are never recalculated.
+After orders exist, deactivate Stalls/Foods or make StallFood entries unavailable instead of hard-deleting referenced data. StallFood ticket-limit updates must enforce `newTicketLimit >= reservedTickets + soldTickets`. Price and discount edits affect future orders only; historical order snapshots are never recalculated.
 
 Event settings retain the `current` singleton, `Asia/Yangon` timezone, and 60/30 defaults. Validation requires `preorderOpenAt < preorderCloseAt < eventDate`; there is no exact 24-hour constraint. Ordering is allowed only inside the schedule while `orderingEnabled` is true. `featureFlags.memoriesEnabled`, `featureFlags.eventPageEnabled`, and `featureFlags.crushLettersEnabled` are independently patchable, default false, preserve omitted siblings, and reject unknown keys. The Crush Letter flag controls new submissions only, not approved public listing. Payment review/approval/rejection and ticket redemption have no EventConfig switch. Updates affect future operations and never rewrite historical orders. Canonical notification types are `PAYMENT_APPROVED`, `PAYMENT_REJECTED`, `ORDER_EXPIRED`, and `PAYMENT_EVIDENCE_EXPIRED`.
 

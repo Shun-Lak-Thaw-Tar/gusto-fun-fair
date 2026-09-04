@@ -7,9 +7,9 @@ export const getStallSales = async (stallId) => {
     { $match: { status: 'PAYMENT_APPROVED' } },
     { $unwind: '$items' },
     { $match: { 'items.stallId': id } },
-    { $group: { _id: '$items.foodItemId', foodName: { $first: '$items.foodName' }, quantitySold: { $sum: '$items.quantity' }, approvedRevenue: { $sum: '$items.subtotal' } } },
+    { $group: { _id: { $ifNull: ['$items.stallFoodId', '$items.foodItemId'] }, stallFoodId: { $first: '$items.stallFoodId' }, foodId: { $first: '$items.foodId' }, foodItemId: { $first: '$items.foodItemId' }, foodName: { $first: '$items.foodName' }, quantitySold: { $sum: '$items.quantity' }, approvedRevenue: { $sum: '$items.subtotal' } } },
     { $sort: { quantitySold: -1, foodName: 1 } },
-    { $project: { _id: 0, foodItemId: '$_id', foodName: 1, quantitySold: 1, approvedRevenue: 1 } },
+    { $project: { _id: 0, stallFoodId: 1, foodId: 1, foodItemId: 1, legacyOrStallFoodId: '$_id', foodName: 1, quantitySold: 1, approvedRevenue: 1 } },
   ]);
   return {
     summary: { approvedRevenue: foods.reduce((sum, food) => sum + food.approvedRevenue, 0), foodTicketsSold: foods.reduce((sum, food) => sum + food.quantitySold, 0) },
