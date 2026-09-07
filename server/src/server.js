@@ -26,7 +26,7 @@ try {
     finally { cleanupRunning = false; }
   }, 60_000);
   mediaTimer.unref();
-  server = app.listen(env.port, () => console.log(`Fun Fair API listening on port ${env.port}`));
+  server = app.listen(env.port, env.host, () => console.log(`Fun Fair API listening on ${env.host}:${env.port}`));
   process.on('SIGINT', () => shutdown('SIGINT'));
   process.on('SIGTERM', () => shutdown('SIGTERM'));
 } catch (error) {

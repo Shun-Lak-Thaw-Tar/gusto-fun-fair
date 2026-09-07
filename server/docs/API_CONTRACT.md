@@ -172,3 +172,7 @@ Admin clients should show confirmation dialogs before changing operational switc
 - After declaration: “Payment reported. Upload your KBZ payment proof within 30 minutes.” “Cancellation is no longer available.”
 - Initial expiry: “Your reservation expired and the food tickets were released.”
 - Evidence expiry: “Your payment-proof upload period expired. Your reserved food tickets were released. Please contact the event administrators if you already made a payment.”
+
+## Production proxy and authentication throttling
+
+See [EC2 networking](EC2_NETWORKING.md) for localhost binding, trusted Nginx headers and auth limits. Login/register may return `429` with `Retry-After` and a user-facing message. Limits run before credential verification; successful login does not consume the name/IP failure allowance.

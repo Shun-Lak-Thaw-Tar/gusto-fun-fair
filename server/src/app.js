@@ -18,6 +18,7 @@ import crushLetterRoutes from './routes/crushLetterRoutes.js';
 
 const app = express();
 app.disable('x-powered-by');
+app.set('trust proxy', env.trustProxy);
 app.use(helmet());
 app.use(cors({ origin: env.clientUrl, credentials: true, exposedHeaders: ['Retry-After'] }));
 app.use(express.json({ limit: '1mb' }));
