@@ -19,7 +19,7 @@ import crushLetterRoutes from './routes/crushLetterRoutes.js';
 const app = express();
 app.disable('x-powered-by');
 app.use(helmet());
-app.use(cors({ origin: env.clientUrl, credentials: true }));
+app.use(cors({ origin: env.clientUrl, credentials: true, exposedHeaders: ['Retry-After'] }));
 app.use(express.json({ limit: '1mb' }));
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', message: 'Fun Fair API is running' }));
 app.use('/api/event', eventRoutes);

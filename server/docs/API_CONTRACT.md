@@ -46,7 +46,7 @@ Returns `201` with the stored order plus checkout information: exact amount, `FF
 
 ### `GET /api/orders` and `GET /api/orders/:id` — authenticated owner
 
-Return the caller's immutable order price snapshots and lifecycle timestamps.
+Return the caller's immutable order price snapshots and lifecycle timestamps. New orders also snapshot each item's `foodImage` (`url`, `storageKey`, `provider`). `GET /api/orders/:id` returns `items[].foodImage` for the detail view: saved image references take precedence, and older items are enriched by their Food ID (or StallFood ID), including inactive foods. Missing/deleted food images return `null`. This read does not write to the database or change historical names, quantities or prices. The order list and lifecycle action responses remain stored snapshots; refresh the detail endpoint after an action to obtain legacy image enrichment.
 
 ### `POST /api/orders/:id/payment-declare` — authenticated owner
 
@@ -63,6 +63,11 @@ Body: none. Allowed only for `AWAITING_PAYMENT + RESERVED`. Returns `200` with `
 See [MEDIA_BACKEND_REPORT.md](MEDIA_BACKEND_REPORT.md#api-contract) for the complete request/response contract.
 
 - `POST /api/payments/orders/:orderId`: authenticated owner sends multipart field `image`, not a JSON URL. JPEG, PNG, or WebP, at most 7 MB.
+- Proof uploads use two concurrent slots per backend process, one per account. The slot covers preflight, multipart reception, Sharp, R2 and the database transaction. Extra requests are rejected before multipart parsing; no in-memory waiting queue is created.
+- Per-account proof limits: 12 attempts/minute and 60 attempts/15 minutes. Invalid attempts count; busy and already-in-progress responses are refunded. These limits do not aggregate students behind one campus IP.
+- `429` reports `error.details.code = PROOF_UPLOAD_RATE_LIMITED` or `PROOF_UPLOAD_IN_PROGRESS`; `503` capacity responses report `PROOF_UPLOAD_BUSY`. All include numeric `Retry-After` seconds and `error.details.retryAfterSeconds`. Keep the selected file and retry manually after that delay; do not automatically resubmit payments.
+- Ownership, state and initial-proof deadline are checked before accepting the file, and the transaction still rechecks state/version. File reception is capped at 180 seconds; interrupted clients keep their local file and should refresh status before retrying. R2 PUT operations have a 45-second deadline.
+- Limits are in `src/middleware/proofUploadMiddleware.js`, sized for one Node process on a 2 GiB instance. Multiple workers/instances would need shared admission/rate state. Memory-photo request limits are unchanged; this is payment-proof protection, not a site-wide DDoS guarantee. During EC2 setup, configure proxy body limits/timeouts and preserve the retry response.
 - Initial proof requires `PAYMENT_DECLARED + RESERVED` before `paymentProofExpiresAt`. Admin-granted replacement requires `PAYMENT_REUPLOAD_REQUESTED + RESERVED`, without a deadline.
 - Each granted replacement accepts one upload and returns to `PAYMENT_SUBMITTED`. Earlier screenshots remain privately accessible.
 - `GET /api/payments/orders/:orderId`: owner retrieves payment status, reason, proof versions, and review history.

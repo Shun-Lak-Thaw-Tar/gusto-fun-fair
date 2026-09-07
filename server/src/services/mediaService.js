@@ -16,7 +16,7 @@ const r2 = () => {
 
 // Integration tests replace this adapter; HTTP validation and persistence still run.
 export const mediaStorage = {
-  put: (asset, body) => r2().send(new PutObjectCommand({ Bucket: env.r2Bucket, Key: asset.storageKey, Body: body, ContentType: asset.contentType, CacheControl: 'no-store' })),
+  put: (asset, body) => r2().send(new PutObjectCommand({ Bucket: env.r2Bucket, Key: asset.storageKey, Body: body, ContentType: asset.contentType, CacheControl: 'no-store' }), { abortSignal: AbortSignal.timeout(45_000) }),
   get: (asset) => r2().send(new GetObjectCommand({ Bucket: env.r2Bucket, Key: asset.storageKey })),
   delete: (asset) => r2().send(new DeleteObjectCommand({ Bucket: env.r2Bucket, Key: asset.storageKey })),
 };

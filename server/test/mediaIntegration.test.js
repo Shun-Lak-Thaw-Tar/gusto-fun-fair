@@ -168,7 +168,8 @@ test('media and payment HTTP integration', { timeout: 120_000 }, async (t) => {
   const proofPath = `/payments/orders/${order._id}`;
   let payment;
   await t.test('only the order owner can submit actual proof bytes', async () => {
-    expectStatus(await request(proofPath, { user: 'owner', method: 'POST', file: png }), 404);
+    expectStatus(await request(proofPath, { user: 'owner', method: 'POST', file: Buffer.alloc(MAX_IMAGE_BYTES + 1) }), 404);
+    expectStatus(await request('/payments/orders/invalid', { user: 'owner', method: 'POST', file: png }), 400);
     expectStatus(await request(proofPath, { user: 'other', method: 'POST', json: { paymentProof: { url: 'https://example.com/proof.png' } } }), 400);
     payment = expectStatus(await request(proofPath, { user: 'other', method: 'POST', file: png }), 201).payment;
     assert.equal(payment.proofVersion, 1); assert.equal(payment.status, 'SUBMITTED');
@@ -203,7 +204,10 @@ test('media and payment HTTP integration', { timeout: 120_000 }, async (t) => {
     await releaseExpiredReservations(new Date(Date.now() + 100 * 86400_000));
     assert.equal((await Order.findById(order._id)).inventoryStatus, 'RESERVED');
     const results = await Promise.all([request(proofPath, { user: 'other', method: 'POST', file: png }), request(proofPath, { user: 'other', method: 'POST', file: png })]);
-    assert.deepEqual(results.map(r => r.status).sort(), [201, 409]);
+    assert.equal(results.filter(r => r.status === 201).length, 1);
+    assert.ok(results.every(r => [201, 409, 429].includes(r.status)));
+    const busy = results.find(r => r.status === 429);
+    if (busy) assert.equal(busy.data.error.details.code, 'PROOF_UPLOAD_IN_PROGRESS');
     payment = results.find(r => r.status === 201).data.payment;
     assert.equal(payment.proofVersion, 2); assert.equal(payment.proofs.length, 2);
     assert.equal(payment.reviewHistory[0].reason, 'Wrong screenshot');
