@@ -5,7 +5,7 @@ import MemoryReaction from '../models/MemoryReaction.js';
 import SnapSettings from '../models/SnapSettings.js';
 import ApiError from '../utils/ApiError.js';
 import { getCurrentEvent } from '../services/eventService.js';
-import { assertSnapWindow, createSnap, currentSnapContext, deleteSnap, setReaction } from '../services/memoryService.js';
+import { assertMemoriesEnabled, assertSnapWindow, createSnap, currentSnapContext, deleteSnap, setReaction } from '../services/memoryService.js';
 import { discardUpload, sendImage, uploadImage } from '../services/mediaService.js';
 
 const captionSchema = z.object({ caption: z.string().trim().max(300).optional().default('') }).strict();
@@ -16,6 +16,7 @@ export const createMemory = async (req, res) => {
   const parsed = captionSchema.safeParse(req.body);
   if (!parsed.success) throw new ApiError(400, 'Caption must be at most 300 characters');
   const event = await getCurrentEvent();
+  assertMemoriesEnabled(event);
   await assertSnapWindow(event._id);
   const asset = await uploadImage({ file: req.file, userId: req.user._id, purpose: 'snaps' });
   try {
@@ -51,10 +52,10 @@ export const getMemoryImage = async (req, res) => {
   if (!memory) throw new ApiError(404, 'Photo not found');
   await sendImage(memory.assetId, res, { publicGallery: true });
 };
-export const deleteMyMemory = async (req, res) => { await deleteSnap({ id: req.params.id, user: req.user }); res.status(204).end(); };
+export const deleteMyMemory = async (req, res) => { assertMemoriesEnabled(await getCurrentEvent()); await deleteSnap({ id: req.params.id, user: req.user }); res.status(204).end(); };
 export const removeMemory = async (req, res) => { await deleteSnap({ id: req.params.id, user: req.user, admin: true }); res.status(204).end(); };
 export const getSnapWindow = async (_req, res) => res.json({ snaps: await currentSnapContext() });
-export const getMySnapAllowance = async (req, res) => res.json({ snaps: await currentSnapContext(req.user._id) });
+export const getMySnapAllowance = async (req, res) => { assertMemoriesEnabled(await getCurrentEvent()); res.json({ snaps: await currentSnapContext(req.user._id) }); };
 export const getMyMemories = async (req, res) => {
   const event = await getCurrentEvent();
   const memories = await Memory.find({ eventId: event._id, userId: req.user._id, status: { $in: ['ACTIVE', 'ADMIN_REMOVED'] } }).select('_id caption status createdAt').lean();
@@ -70,6 +71,7 @@ export const updateSnapWindow = async (req, res) => {
 export const reactToMemory = async (req, res) => {
   const parsed = z.object({ reaction: z.enum(['LIKE', 'DISLIKE']).nullable() }).strict().safeParse(req.body);
   if (!parsed.success) throw new ApiError(400, 'Reaction must be LIKE, DISLIKE, or null');
+  assertMemoriesEnabled(await getCurrentEvent());
   res.json({ reaction: await setReaction({ memoryId: req.params.id, userId: req.user._id, reaction: parsed.data.reaction }) });
 };
 export const getMyReaction = async (req, res) => {

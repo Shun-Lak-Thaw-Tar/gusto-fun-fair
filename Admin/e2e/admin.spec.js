@@ -25,11 +25,33 @@ test('all thirteen pages load and navigation remains within the viewport on tabl
 for(const decision of ['APPROVED','REJECTED'])test(`payment ${decision} sends current version and reason`,async({page})=>{await mock(page);await page.goto('/admin/payments');await page.getByRole('button',{name:'Review payment'}).click();await page.getByLabel('Decision',{exact:true}).selectOption(decision);if(decision==='REJECTED')await page.getByLabel('Reason (required').fill('Amount does not match');page.on('dialog',d=>d.accept());const request=page.waitForRequest(r=>r.url().endsWith('/p1/review')&&r.method()==='PATCH');await page.getByRole('button',{name:'Submit review'}).click();const body=(await request).postDataJSON();expect(body).toEqual({decision,proofVersion:2,...(decision==='REJECTED'?{reason:'Amount does not match'}:{})});await expect(page.getByText('Payment review saved.')).toBeVisible();});
 test('ticket lookup and redemption display authoritative response',async({page})=>{await mock(page);await page.goto('/admin/tickets');await page.getByLabel('Ticket code').fill('FF26-X82K91');await page.getByRole('button',{name:'Verify ticket'}).click();await expect(page.getByText('Physical tickets required')).toBeVisible();page.on('dialog',d=>d.accept());await page.getByRole('button',{name:'Redeem ticket',exact:true}).click();await expect(page.getByText('REDEEMED',{exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Redeem ticket',exact:true})).toHaveCount(0);});
 test('API failure can be retried without invented data',async({page})=>{await mock(page);let fail=true;await page.route('**/api/admin/orders',route=>fail?route.fulfill({status:503,json:{error:{message:'Database unavailable'}}}):route.fulfill({json:{orders:[]}}));await page.goto('/admin/orders');await expect(page.getByRole('alert')).toContainText('Database unavailable');fail=false;await page.getByRole('button',{name:'Try again'}).click();await expect(page.getByText('No records to show.')).toBeVisible();});
-test('stall creation sends only supported fields and confirms the change',async({page})=>{
+const PNG_1X1=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=','base64');
+test('stall creation without an image sends multipart form data with only supported fields',async({page})=>{
  await mock(page);await page.goto('/admin/stalls');await page.getByRole('button',{name:'Add stall'}).click();
  await page.getByLabel('Stall name',{exact:true}).fill('Burger House');await page.getByLabel('Batch',{exact:true}).fill('Batch 26');await page.getByLabel('Description',{exact:true}).fill('Fresh burgers');
  page.on('dialog',d=>d.accept());const request=page.waitForRequest(r=>r.url().endsWith('/admin/stalls')&&r.method()==='POST');await page.getByRole('button',{name:'Save changes'}).click();
- expect((await request).postDataJSON()).toEqual({stallName:'Burger House',batch:'Batch 26',description:'Fresh burgers',isActive:true,image:{url:''}});await expect(page.getByText('Stall saved.')).toBeVisible();
+ const req=await request;
+ expect(await req.headerValue('content-type')).toMatch(/^multipart\/form-data; boundary=/);
+ const body=req.postData()||'';
+ expect(body).toContain('name="stallName"');expect(body).toContain('Burger House');
+ expect(body).toContain('name="batch"');expect(body).toContain('Batch 26');
+ expect(body).toContain('name="description"');expect(body).toContain('Fresh burgers');
+ expect(body).toMatch(/name="isActive"[\s\S]*?true/);
+ expect(body).not.toContain('name="image"');
+ for(const field of ['image.url','image.storageKey','image.provider','image.assetId','storageKey','provider','assetId'])expect(body).not.toContain(`name="${field}"`);
+ await expect(page.getByText('Stall saved.')).toBeVisible();
+});
+test('stall creation with a selected image attaches it as a multipart image field',async({page})=>{
+ await mock(page);await page.goto('/admin/stalls');await page.getByRole('button',{name:'Add stall'}).click();
+ await page.getByLabel('Stall name',{exact:true}).fill('Taco Stand');await page.getByLabel('Batch',{exact:true}).fill('Batch 27');
+ await page.getByLabel('Image',{exact:true}).setInputFiles({name:'stall.png',mimeType:'image/png',buffer:PNG_1X1});
+ page.on('dialog',d=>d.accept());const request=page.waitForRequest(r=>r.url().endsWith('/admin/stalls')&&r.method()==='POST');await page.getByRole('button',{name:'Save changes'}).click();
+ const req=await request;
+ expect(await req.headerValue('content-type')).toMatch(/^multipart\/form-data; boundary=/);
+ const body=req.postData()||'';
+ expect(body).toContain('name="image"');expect(body).toContain('filename="stall.png"');
+ for(const field of ['image.url','image.storageKey','image.provider','image.assetId','storageKey','provider','assetId'])expect(body).not.toContain(`name="${field}"`);
+ await expect(page.getByText('Stall saved.')).toBeVisible();
 });
 test('menu form keeps computed inventory and preorder prices out of writes',async({page})=>{
  await mock(page);const stallId='a'.repeat(24),foodId='b'.repeat(24);

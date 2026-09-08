@@ -127,6 +127,46 @@ test('Backend V1.3 Admin and Stall Owner system', async (t) => {
   await t.test('owner sees own stall', async () => assert.equal((await request('/stall-owner/stall', { headers: ownerHeaders })).body.stall._id, stallA._id));
   await t.test('owner sees only own foods', async () => { const foods = (await request('/stall-owner/foods', { headers: ownerHeaders })).body.foods; assert.equal(foods.every((food) => food.stallId === stallA._id), true); assert.equal(foods.some((food) => food.stallFoodId === stallFoodB._id), false); });
   await t.test('owner sales use approved historical stall items only', async () => { const result = await request('/stall-owner/sales', { headers: ownerHeaders }); assert.deepEqual(result.body.summary, { approvedRevenue: 16000, foodTicketsSold: 3 }); assert.equal(result.body.foods.length, 1); });
+
+  const stallBOwnerResponse = await request(`/admin/stalls/${stallB._id}/owner`, { method: 'POST', headers: adminHeaders, body: { name: 'owner_13b', password: 'OwnerPassword13B' } });
+  const stallBOwner = await User.findById(stallBOwnerResponse.body.owner._id);
+  const stallBOwnerHeaders = { Authorization: `Bearer ${token(stallBOwner)}` };
+  await t.test('unauthenticated caller receives 401 on owner orders API', async () => assert.equal((await request('/stall-owner/orders')).status, 401));
+  await t.test('normal user receives 403 on owner orders API', async () => assert.equal((await request('/stall-owner/orders', { headers: userHeaders })).status, 403));
+  await t.test('Admin is not treated as a stall owner for orders', async () => assert.equal((await request('/stall-owner/orders', { headers: adminHeaders })).status, 403));
+  await t.test('owner sees only approved orders containing own StallFood, excluding submitted/rejected/cancelled/expired', async () => {
+    const result = await request('/stall-owner/orders', { headers: ownerHeaders });
+    assert.equal(result.status, 200);
+    assert.deepEqual(result.body.summary, { approvedOrderCount: 2 });
+    assert.equal(result.body.orders.length, 2);
+    assert.equal(result.body.orders.some((o) => o.paymentReference === 'FF-ORDER-V13C'), false);
+    assert.ok(result.body.orders.find((o) => o.paymentReference === 'FF-ORDER-V13A'));
+    assert.ok(result.body.orders.find((o) => o.paymentReference === 'FF-ORDER-V13B'));
+  });
+  await t.test('multi-stall order exposes only the authenticated owner\'s own line items and totals', async () => {
+    const result = await request('/stall-owner/orders', { headers: ownerHeaders });
+    const multiStallOrder = result.body.orders.find((o) => o.paymentReference === 'FF-ORDER-V13A');
+    assert.equal(multiStallOrder.items.length, 1);
+    assert.equal(multiStallOrder.items[0].foodName, foodA.name);
+    assert.equal(multiStallOrder.stallQuantity, 2);
+    assert.equal(multiStallOrder.stallSubtotal, 9000);
+    assert.doesNotMatch(JSON.stringify(multiStallOrder), new RegExp(foodB.name));
+  });
+  await t.test('owner does not see another stall\'s order that has no line items for their own stall', async () => {
+    const result = await request('/stall-owner/orders', { headers: stallBOwnerHeaders });
+    assert.deepEqual(result.body.summary, { approvedOrderCount: 1 });
+    assert.equal(result.body.orders.length, 1);
+    assert.equal(result.body.orders[0].paymentReference, 'FF-ORDER-V13A');
+    assert.equal(result.body.orders[0].stallQuantity, 4);
+    assert.equal(result.body.orders[0].stallSubtotal, 8000);
+    assert.equal(result.body.orders.some((o) => o.paymentReference === 'FF-ORDER-V13B'), false);
+  });
+  await t.test('stall identity for orders comes from the authenticated account, not a request parameter', async () => {
+    const withForeignParam = await request(`/stall-owner/orders?stallId=${stallB._id}`, { headers: ownerHeaders });
+    const withoutParam = await request('/stall-owner/orders', { headers: ownerHeaders });
+    assert.deepEqual(withForeignParam.body, withoutParam.body);
+    assert.equal(withForeignParam.body.orders.some((o) => o.items.some((item) => item.foodName === foodB.name)), false);
+  });
   await t.test('private owner API accepts no arbitrary stall ID', async () => assert.equal((await request(`/stall-owner/stalls/${stallB._id}`, { headers: ownerHeaders })).status, 404));
   await t.test('owner responses expose no customer or payment proof', async () => { const text = JSON.stringify((await request('/stall-owner/dashboard', { headers: ownerHeaders })).body); assert.doesNotMatch(text, /passwordHash|paymentProof|customer/i); });
   await t.test('share data is scoped and frontend-ready', async () => { const share = (await request('/stall-owner/share', { headers: ownerHeaders })).body.share; assert.equal(share.slug, stallA.slug); assert.equal(share.publicPath, `/stalls/${stallA.slug}`); assert.equal(share.foodNames.includes('Other Tea'), false); });

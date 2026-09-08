@@ -58,6 +58,16 @@ Declaration means the customer reports that external KBZ payment occurred. Cance
 
 Body: none. Allowed only for `AWAITING_PAYMENT + RESERVED`. Returns `200` with `CANCELLED + RELEASED`; all held quantities are returned. Important errors: `404` not found/not owned, `409` invalid state or repeat request. It is forbidden after declaration, proof submission, approval, rejection, or either expiry state.
 
+## Stall and Food images
+
+Stall and Food images use the same private-R2 `MediaAsset` pipeline as payment proofs and Snaps (see [MEDIA_BACKEND_REPORT.md](MEDIA_BACKEND_REPORT.md)), but are streamed publicly. See `server/src/services/mediaService.js` and `server/src/middleware/uploadMiddleware.js` for the implementation referenced below.
+
+- A Stall image belongs to `Stall.image`; a Food image belongs to `Food.image`. `StallFood` does not own an image field — it references its assigned Food (which carries the image) through `foodId`.
+- `POST /api/admin/stalls`, `PATCH /api/admin/stalls/:id`, `POST /api/admin/foods`, `PATCH /api/admin/foods/:id` — admin-only, accept `multipart/form-data`. Existing text fields (`stallName`, `batch`, `description`, `name`, `category`, `isActive`, etc.) are sent as ordinary form fields; the image is an **optional** file field named `image`. There is no JSON `image` object on these routes — the client must never send `image.url`, `image.storageKey`, `image.provider`, or `image.assetId`; the server generates and owns all storage metadata. Omitting the `image` field leaves an existing image untouched on update, or creates the record with no image on create.
+- Accepted image types: JPEG, PNG, or WebP only, single-frame, verified by decoding the file with Sharp — not just trusting the client's `Content-Type`. Maximum upload size is 7 MB (`MAX_IMAGE_BYTES`); maximum decoded pixel count is 40 megapixels (`limitInputPixels: 40_000_000`). EXIF/GPS metadata is stripped by decoding and re-encoding the image before storage.
+- On success the stored `image` field is `{ url, storageKey, provider: "r2", assetId }`, where `url` is the app-relative streaming path below — never a raw R2 URL. Replacing an image on update moves the previous `MediaAsset` to `DELETE_PENDING`; it is not deleted synchronously.
+- `GET /api/stalls/:id/image` and `GET /api/foods/:id/image` — public, unauthenticated. Stream the current image's bytes from R2 with `Cache-Control: no-store` and `Cross-Origin-Resource-Policy: cross-origin` (unlike private payment-proof/Snap streaming, these are meant to be embedded by either frontend without a bearer token). Return `404` when the Stall/Food has no image or its referenced asset is not `ATTACHED`.
+
 ## Payment proof, gallery, and review
 
 See [MEDIA_BACKEND_REPORT.md](MEDIA_BACKEND_REPORT.md#api-contract) for the complete request/response contract.
@@ -111,9 +121,9 @@ All implemented Admin endpoints require the existing JWT plus `role = "admin"`.
 
 The dashboard contains `totalOrders`, `awaitingPayment`, `paymentDeclared`, `pendingPaymentReview`, `approvedOrders`, `rejectedOrders`, combined `expiredOrders`, `cancelledOrders`, `approvedRevenue`, `foodTicketsSold`, `digitalTicketsIssued`, `digitalTicketsRedeemed`, `physicalTicketsIssued`, `activeStalls`, and `availableFoodItems`. Revenue and food-ticket quantities count approved orders only. Physical ticket quantities count only orders linked to redeemed digital tickets. Available foods must belong to active stalls.
 
-### Planned, not implemented
+### Frontend status
 
-No Admin or Stall Owner frontend is implemented. That is the only remaining boundary; the media/gallery/payment-proof backend is implemented (see above).
+The `Admin/` and `stall owner/` React frontends are implemented and consume the routes documented in this file; see `Admin/README.md` and `stall owner/README.md` for the full page-to-route mapping.
 
 ### Implemented Admin management routes
 
@@ -144,6 +154,7 @@ All require an active authenticated `stall_owner`; the linked stall comes from t
 - `GET /api/stall-owner/dashboard` — owner, linked stall, approved-sales summary
 - `GET /api/stall-owner/stall` — linked stall
 - `GET /api/stall-owner/foods` — linked-stall StallFood entries populated with Food details and calculated prices/remaining counts
+- `GET /api/stall-owner/orders` — approved (`PAYMENT_APPROVED` only) orders that contain the linked stall's items; each order's `items` are filtered to that stall's own line items only, plus `stallQuantity`/`stallSubtotal` totals for those items and an `approvedOrderCount` summary. Newest first, not paginated.
 - `GET /api/stall-owner/sales` — approved-only summary and item breakdown
 - `GET /api/stall-owner/share` — event/stall/food names, slug, and relative public path
 

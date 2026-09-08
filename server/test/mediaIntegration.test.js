@@ -62,7 +62,7 @@ test('media and payment HTTP integration', { timeout: 120_000 }, async (t) => {
   };
   const expectStatus = (result, status) => { assert.equal(result.status, status, JSON.stringify(result.data)); return result.data; };
   const now = Date.now();
-  const event = await EventConfig.create({ eventName: 'Media test', eventDate: new Date(now + 10 * 86400_000), preorderOpenAt: new Date(now - 86400_000), preorderCloseAt: new Date(now + 8 * 86400_000), orderingEnabled: true });
+  const event = await EventConfig.create({ eventName: 'Media test', eventDate: new Date(now + 10 * 86400_000), preorderOpenAt: new Date(now - 86400_000), preorderCloseAt: new Date(now + 8 * 86400_000), orderingEnabled: true, featureFlags: { memoriesEnabled: true } });
   const stall = await Stall.create({ stallName: 'Test Stall', batch: 'A', discount: { type: 'fixed', value: 0 } });
   const genericFood = await Food.create({ name: 'Rice' });
   const food = await StallFood.create({ stallId: stall._id, foodId: genericFood._id, eventDayPrice: 1000, ticketLimit: 100, reservedTickets: 0, soldTickets: 0 });
@@ -253,6 +253,24 @@ test('media and payment HTTP integration', { timeout: 120_000 }, async (t) => {
     await Order.updateOne({ _id: expired._id }, { paymentProofExpiresAt: new Date(0) });
     expectStatus(await request(`/payments/orders/${expired._id}`, { user: 'race', method: 'POST', file: png }), 410);
     assert.equal((await Order.findById(expired._id)).inventoryStatus, 'RELEASED');
+  });
+  await t.test('memoriesEnabled=false blocks new participation but leaves public gallery, reads, and admin controls untouched', async () => {
+    const adminPhoto = expectStatus(await request('/memories', { user: 'admin', method: 'POST', file: png, caption: 'Admin snap' }), 201).memory;
+    expectStatus(await request('/admin/event', { user: 'admin', method: 'PATCH', json: { featureFlags: { memoriesEnabled: false } } }), 200);
+    try {
+      expectStatus(await request('/memories', { user: 'admin', method: 'POST', file: png }), 409);
+      expectStatus(await request(`/memories/${adminPhoto.id}`, { user: 'admin', method: 'DELETE' }), 409);
+      expectStatus(await request(`/memories/${adminPhoto.id}/reaction`, { user: 'other', method: 'PUT', json: { reaction: 'LIKE' } }), 409);
+      expectStatus(await request('/memories/allowance', { user: 'admin' }), 409);
+      expectStatus(await request('/memories'), 200);
+      expectStatus(await request(`/memories/${adminPhoto.id}/image`), 200);
+      expectStatus(await request('/memories/window'), 200);
+      expectStatus(await request(`/memories/${adminPhoto.id}/reaction`, { user: 'other' }), 200);
+      expectStatus(await request('/admin/memories/window', { user: 'admin', method: 'PUT', json: openWindow }), 200);
+      expectStatus(await request(`/admin/memories/${adminPhoto.id}`, { user: 'admin', method: 'DELETE' }), 204);
+    } finally {
+      expectStatus(await request('/admin/event', { user: 'admin', method: 'PATCH', json: { featureFlags: { memoriesEnabled: true } } }), 200);
+    }
   });
   await t.test('closed window blocks uploads and owner deletion, but permits admin moderation and reactions', async () => {
     expectStatus(await request('/admin/memories/window', { user: 'admin', method: 'PUT', json: { opensAt: new Date(now - 120_000).toISOString(), closesAt: new Date(now - 60_000).toISOString() } }), 200);

@@ -4,7 +4,7 @@ import Stall from '../../models/Stall.js';
 import ApiError from '../../utils/ApiError.js';
 import { ticketsRemaining } from '../../services/inventoryService.js';
 import { calculatePreorderPrice } from '../../services/pricingService.js';
-import { getStallSales } from '../../services/stallSalesService.js';
+import { getStallOrders, getStallSales } from '../../services/stallSalesService.js';
 
 const getOwnedStall = async (user) => {
   const stall = await Stall.findById(user.stallId).lean();
@@ -25,6 +25,7 @@ export const getDashboard = async (req, res) => {
 export const getMyStall = async (req, res) => res.json({ stall: await getOwnedStall(req.user) });
 export const getMyFoods = async (req, res) => res.json({ foods: await getOwnedFoods(req.user) });
 export const getMySales = async (req, res) => res.json(await getStallSales(req.user.stallId));
+export const getMyOrders = async (req, res) => res.json(await getStallOrders(req.user.stallId));
 export const getShareData = async (req, res) => {
   const [stall, foods, event] = await Promise.all([getOwnedStall(req.user), StallFood.find({ stallId: req.user.stallId, isAvailable: true }).populate({ path: 'foodId', match: { isActive: true }, select: 'name' }).lean(), EventConfig.findOne({ configKey: 'current' }).select('eventName').lean()]);
   const publicPath = `/stalls/${stall.slug}`;
