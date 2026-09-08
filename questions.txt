@@ -1,0 +1,71 @@
+Questions 
+
+1. GUSTO College ၏ Founder မှာမည်သူဖြစ်သနည်း 
+(A) ဦးတင်မောင်မောင်ယဉ်
+(B) ဦးဝင်းထိန်ဝင်း 
+(C) ဒေါ်သီရိဝင်း
+(D) ဦးကျော်ဇော် 
+Ans: B 
+
+2. 2026 GUSTO Fun Fair Event သည် ဘယ်နှစ်ကြိမ်မြောက်ဖြစ်သနည်း။ 
+(A) ပထမအကြိမ် 
+(B) ဒုတိယအကြိမ်
+(C) တတိယအကြိမ်
+(D) စတုတ္တအကြိမ် 
+Ans: C
+
+3. GUSTO ၌ လက်ရှိမရှိသော Program သည်မည်သည့် program ဖြစ်သနည်း။ 
+(A) B.Sc (Hons;) Computer Systems Engineering 
+(B) M.Sc Data Science 
+(C) Pre-IGCSE 
+(D) M.Sc Business Management 
+Ans: D 
+
+4. GUSTO ကို စတင်တည်ထောင်ခဲ့သော ခုနှစ်ကိုဖြေပါ။ 
+(A) 2007 
+(B) 2006 
+(C) 2005 
+(D) 2008 
+Ans: B 
+
+5. GUSTO ၌ IoT ဘာသာရပ်ကို မည်သည့် term တွင်သင်သနည်း။ 
+(A) First Year Second Semester 
+(B) Second Year First Semester 
+(C) Second Year Second Semester 
+(D) Final Year First Semester 
+Ans: B
+
+6. GUSTO College ၌ GGA ဘယ်နှစ်ချက် ဖော်ပြထားသနည်း။ 
+(A) 4
+(B) 5
+(C) 6 
+(D) 7 
+Ans: 5 
+
+7. GUSTO College နှင့်ချိတ်ဆက်ထားသော UK University ကိုဖော်ပြပါ။ 
+(A) Sunderland University 
+(B) Edinburgh University 
+(C) Cambridge University 
+(D) Oxford University 
+Ans: A
+
+8. GUSTO ၌ လက်ရှိမရှိသော Club ကိုဖော်ပြပါ။ 
+(A) Literature Club 
+(B) Badminton Club 
+(C) Chess Club 
+(D) IoT Club 
+Ans: D
+
+9. GUSTO College ၌ မကျင်းပသော ပွဲကိုရွေးပါ။ 
+(A) သီတင်းကျွတ်ပွဲ
+(B) ဟောလိုးဝင်းပွဲ 
+(C) ခရစ်စမတ်ပွဲ 
+(D) သင်္ကြန်ပွဲ 
+Ans: B 
+
+10. GUSTO College Foundation အတန်း၌ မသင်ရသော ဘာသာရပ်ကိုဖော်ပြပါ။ 
+(A) English 
+(B) Math 
+(C) Digital 
+(D) Business 
+Ans: B

@@ -1,0 +1,2 @@
+import { Router } from 'express'; import { cancelMyOrder, createOrder, declareMyPayment, getMyOrder, listMyOrders } from '../controllers/orderController.js'; import { requireAuth } from '../middleware/authMiddleware.js';
+const router = Router(); router.use(requireAuth); router.route('/').get(listMyOrders).post(createOrder); router.post('/:id/payment-declare', declareMyPayment); router.post('/:id/cancel', cancelMyOrder); router.get('/:id', getMyOrder); export default router;
