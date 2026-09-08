@@ -1,0 +1,55 @@
+.page-heading{min-height:165px;gap:18px}
+.page-heading>div:first-child{flex:1;min-width:0}
+.page-heading::after{display:none}
+.page-heading .workspace-tag{display:none}
+.banner-mascot{position:relative;flex:0 0 240px;width:240px;align-self:center;color:var(--navy)}
+.banner-mascot svg{display:block;width:100%;overflow:visible}
+.play-ground{stroke:#457B9D50;stroke-width:2;stroke-linecap:round}
+.spirit-shadow{fill:var(--navy);opacity:.12;animation:shadow-breathe 3.4s ease-in-out infinite}
+.spirit-shadow.mini{animation:shadow-hop 1.5s ease-in-out infinite}
+
+.spirit-fur{fill:var(--light);stroke:var(--navy);stroke-width:2.5;stroke-linejoin:round}
+.spirit-belly{fill:var(--bg);stroke:var(--navy);stroke-width:2.5}
+.spirit-arm{fill:var(--light);stroke:var(--navy);stroke-width:2.5}
+.left-arm{transform-origin:87px 54px;animation:arm-hold 3.4s ease-in-out infinite}
+.spirit-foot{fill:var(--light);stroke:var(--navy);stroke-width:2.5}
+.spirit-mark{fill:none;stroke:var(--navy);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;opacity:.75}
+.spirit-whisker{fill:none;stroke:var(--navy);stroke-width:1.6;stroke-linecap:round;opacity:.8}
+.spirit-blush{fill:var(--red);opacity:.28}
+.eye-white{fill:var(--bg);stroke:var(--navy);stroke-width:2}
+.eye-pupil{fill:var(--navy)}
+.eye-glint{fill:var(--bg)}
+.spirit-eyes{transform-origin:120px 40px;animation:eye-blink 5s infinite}
+.spirit-nose{fill:var(--navy)}
+.spirit-mouth{fill:none;stroke:var(--navy);stroke-width:1.8;stroke-linecap:round}
+
+.spirit-leaf{transform-origin:100px 22px;animation:leaf-wobble 3.4s ease-in-out infinite}
+.leaf-blade{fill:var(--blue);stroke:var(--navy);stroke-width:2.5;stroke-linejoin:round}
+.leaf-stem{fill:none;stroke:var(--navy);stroke-width:3;stroke-linecap:round}
+.leaf-vein{fill:none;stroke:var(--bg);stroke-width:1.4;stroke-linecap:round;opacity:.8}
+
+.play-spirit{transform-origin:120px 94px;animation:spirit-breathe 3.4s ease-in-out infinite}
+.mini-spirit{transform-origin:206px 94px;animation:mini-hop 1.5s ease-in-out infinite}
+
+.rain .drop{stroke:var(--blue);stroke-width:2;stroke-linecap:round;opacity:0;animation:rain-fall 1.6s linear infinite}
+.rain .d2{animation-delay:.3s}
+.rain .d3{animation-delay:.7s}
+.rain .d4{animation-delay:1s}
+.rain .d5{animation-delay:1.3s}
+.play-spark{fill:var(--blue);animation:spark-twinkle 3.4s ease-in-out infinite}
+.motion-toggle{display:block;margin:0 6px 0 auto;border:1px solid #457B9D50;background:#F1FAEE80;font-size:9px;padding:3px 8px;color:var(--navy)}
+.banner-mascot.paused *{animation-play-state:paused!important}
+
+@keyframes spirit-breathe{0%,100%{transform:translateY(0) scale(1,1)}50%{transform:translateY(-2px) scale(1.02,1.03)}}
+@keyframes shadow-breathe{0%,100%{transform:scale(1);opacity:.12}50%{transform:scale(.94);opacity:.09}}
+@keyframes leaf-wobble{0%,100%{transform:rotate(-7deg)}50%{transform:rotate(7deg)}}
+@keyframes arm-hold{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(6deg)}}
+@keyframes eye-blink{0%,40%,44%,86%,90%,100%{transform:scaleY(1)}42%,88%{transform:scaleY(.08)}}
+@keyframes mini-hop{0%,100%{transform:translateY(0) scale(1,1)}20%{transform:translateY(0) scale(1.12,.88)}55%{transform:translateY(-14px) scale(.94,1.08)}80%{transform:translateY(0) scale(1.08,.92)}}
+@keyframes shadow-hop{0%,100%{transform:scale(1);opacity:.12}55%{transform:scale(.6);opacity:.06}}
+@keyframes rain-fall{0%{transform:translateY(0);opacity:0}15%{opacity:.7}85%{opacity:.7}100%{transform:translateY(86px);opacity:0}}
+@keyframes spark-twinkle{0%,100%{transform:translateY(0);opacity:.35}50%{transform:translateY(-4px);opacity:.9}}
+
+@media(max-width:1050px){.banner-mascot{flex-basis:175px;width:175px}}
+@media(max-width:520px){.page-heading{flex-wrap:wrap;padding-bottom:12px}.page-heading>div:first-child{flex-basis:100%}.banner-mascot{flex-basis:155px;width:155px;margin-left:auto;margin-top:-8px}}
+@media(prefers-reduced-motion:reduce){.banner-mascot *{animation:none!important}.motion-toggle{display:none}}
