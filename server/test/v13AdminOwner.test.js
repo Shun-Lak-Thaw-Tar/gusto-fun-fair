@@ -40,7 +40,7 @@ test('Backend V1.3 Admin and Stall Owner system', async (t) => {
 
   await t.test('unauthenticated callers cannot manage stalls', async () => assert.equal((await request('/admin/stalls')).status, 401));
   await t.test('normal users cannot manage stalls', async () => assert.equal((await request('/admin/stalls', { headers: userHeaders })).status, 403));
-  const stallBody = { stallName: 'Owner Food Hub', batch: 'Batch 13', description: 'Test stall', image: { url: '/stall.jpg', provider: 'test', storageKey: '' } };
+  const stallBody = { stallName: 'Owner Food Hub', batch: 'Batch 13', description: 'Test stall' };
   const stallAResponse = await request('/admin/stalls', { method: 'POST', headers: adminHeaders, body: stallBody });
   const stallA = stallAResponse.body.stall;
   await t.test('Admin creates a stall with a generated slug', () => { assert.equal(stallAResponse.status, 201); assert.equal(stallA.slug, 'owner-food-hub'); });
@@ -56,7 +56,7 @@ test('Backend V1.3 Admin and Stall Owner system', async (t) => {
   await t.test('no hard-delete Stall endpoint exists', async () => assert.equal((await request(`/admin/stalls/${stallA._id}`, { method: 'DELETE', headers: adminHeaders })).status, 404));
   await request(`/admin/stalls/${stallA._id}/status`, { method: 'PATCH', headers: adminHeaders, body: { isActive: true } });
 
-  const foodBody = { name: 'Owner Burger', description: 'Test food', category: 'Main', isActive: true, image: { url: '/food.jpg' } };
+  const foodBody = { name: 'Owner Burger', description: 'Test food', category: 'Main', isActive: true };
   await t.test('generic food creation rejects stall-owned fields', async () => assert.equal((await request('/admin/foods', { method: 'POST', headers: adminHeaders, body: { ...foodBody, stallId: stallA._id } })).status, 400));
   await t.test('generic food creation rejects pricing fields', async () => assert.equal((await request('/admin/foods', { method: 'POST', headers: adminHeaders, body: { ...foodBody, eventDayPrice: 1 } })).status, 400));
   const foodAResponse = await request('/admin/foods', { method: 'POST', headers: adminHeaders, body: foodBody });

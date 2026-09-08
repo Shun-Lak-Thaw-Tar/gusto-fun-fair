@@ -1,5 +1,7 @@
 import Stall from '../models/Stall.js';
 import StallFood from '../models/StallFood.js';
+import ApiError from '../utils/ApiError.js';
+import { sendImage } from '../services/mediaService.js';
 import { presentStallFood } from './foodController.js';
 import { releaseExpiredReservations } from '../services/orderLifecycleService.js';
 export const listStalls = async (_req, res) => res.json({ stalls: await Stall.find({ isActive: true }).sort({ stallName: 1 }).lean() });
@@ -10,4 +12,9 @@ export const getStallBySlug = async (req, res) => {
   if (!stall) return res.status(404).json({ error: { message: 'Stall not found' } });
   const foods = await StallFood.find({ stallId: stall._id, isAvailable: true }).populate({ path: 'foodId', match: { isActive: true } }).lean();
   res.json({ stall, foods: foods.filter((entry) => entry.foodId).map((entry) => presentStallFood({ ...entry, stallId: stall })) });
+};
+export const getStallImage = async (req, res) => {
+  const stall = await Stall.findById(req.params.id).lean();
+  if (!stall?.image?.assetId) throw new ApiError(404, 'Image not found');
+  await sendImage(stall.image.assetId, res, { publicGallery: true });
 };

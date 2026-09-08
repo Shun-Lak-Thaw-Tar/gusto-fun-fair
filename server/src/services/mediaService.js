@@ -40,7 +40,7 @@ export const validateImage = async (file) => {
 };
 
 export const uploadImage = async ({ file, userId, purpose }) => {
-  if (!['proofs', 'snaps'].includes(purpose)) throw new Error('Invalid media purpose');
+  if (!['proofs', 'snaps', 'stalls', 'foods'].includes(purpose)) throw new Error('Invalid media purpose');
   const { buffer, contentType, extension } = await validateImage(file);
   const asset = await MediaAsset.create({ userId, purpose, storageKey: `${purpose}/${userId}/${randomUUID()}.${extension}`, contentType, size: buffer.length });
   try {

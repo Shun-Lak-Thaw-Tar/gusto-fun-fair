@@ -1,7 +1,9 @@
+import Food from '../models/Food.js';
 import StallFood from '../models/StallFood.js';
 import ApiError from '../utils/ApiError.js';
 import { calculatePreorderPrice } from '../services/pricingService.js';
 import { ticketsRemaining } from '../services/inventoryService.js';
+import { sendImage } from '../services/mediaService.js';
 import { releaseExpiredReservations } from '../services/orderLifecycleService.js';
 
 export const presentStallFood = (entry) => ({
@@ -21,4 +23,10 @@ export const getFood = async (req, res) => {
   const entry = await StallFood.findOne({ _id: req.params.id, isAvailable: true }).populate({ path: 'stallId', match: { isActive: true } }).populate({ path: 'foodId', match: { isActive: true } }).lean();
   if (!entry?.stallId || !entry?.foodId) throw new ApiError(404, 'Stall food not found');
   res.json({ food: presentStallFood(entry) });
+};
+// :id here is the Food catalog id, unlike the StallFood id used by the routes above.
+export const getFoodImage = async (req, res) => {
+  const food = await Food.findById(req.params.id).lean();
+  if (!food?.image?.assetId) throw new ApiError(404, 'Image not found');
+  await sendImage(food.image.assetId, res, { publicGallery: true });
 };

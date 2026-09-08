@@ -43,13 +43,14 @@ test('media and payment HTTP integration', { timeout: 120_000 }, async (t) => {
     users[name] = { ...user.toObject(), token: jwt.sign({ sub: String(user._id) }, env.jwtSecret) };
   }
   const png = await sharp({ create: { width: 4, height: 4, channels: 3, background: 'blue' } }).png().toBuffer();
-  const request = async (path, { user, method = 'GET', json, file, caption, mime = 'image/png' } = {}) => {
+  const request = async (path, { user, method = 'GET', json, file, caption, fields, mime = 'image/png' } = {}) => {
     const headers = user ? { Authorization: `Bearer ${users[user].token}` } : {};
     let body;
     if (file) {
       body = new FormData();
       body.append('image', new Blob([file], { type: mime }), 'photo.png');
       if (caption !== undefined) body.append('caption', caption);
+      if (fields) for (const [key, value] of Object.entries(fields)) body.append(key, value);
     } else if (json !== undefined) {
       headers['Content-Type'] = 'application/json';
       body = JSON.stringify(json);
@@ -271,5 +272,32 @@ test('media and payment HTTP integration', { timeout: 120_000 }, async (t) => {
     assert.equal(result.pending, 0);
     assert.ok(result.deleted > 0);
     expectStatus(await request(`/payments/${payment.id}/proofs/1`, { user: 'other' }), 200);
+  });
+  await t.test('admin can create a stall with an uploaded image, served publicly from R2', async () => {
+    const created = expectStatus(await request('/admin/stalls', { user: 'admin', method: 'POST', file: png, fields: { stallName: 'Media Test Stall', batch: 'M' } }), 201).stall;
+    assert.equal(created.image.url, `/api/stalls/${created._id}/image`);
+    const image = await request(created.image.url.replace(/^\/api/, ''));
+    expectStatus(image, 200);
+    assert.ok(image.data.length > 0);
+  });
+  await t.test('replacing a stall image discards the previous asset', async () => {
+    const before = await Stall.findOne({ stallName: 'Media Test Stall' });
+    const previousAssetId = before.image.assetId;
+    const updated = expectStatus(await request(`/admin/stalls/${before._id}`, { user: 'admin', method: 'PATCH', file: png, fields: { stallName: 'Media Test Stall' } }), 200).stall;
+    assert.notEqual(String(updated.image.assetId), String(previousAssetId));
+    assert.equal((await MediaAsset.findById(previousAssetId)).status, 'DELETE_PENDING');
+    assert.equal((await MediaAsset.findById(updated.image.assetId)).status, 'ATTACHED');
+  });
+  await t.test('a stall can still be created without an image', async () => {
+    const created = expectStatus(await request('/admin/stalls', { user: 'admin', method: 'POST', json: { stallName: 'No Image Stall', batch: 'N' } }), 201).stall;
+    assert.equal(created.image.url, '');
+  });
+  await t.test('admin can create a food with an uploaded image, served publicly from R2', async () => {
+    const createdFood = expectStatus(await request('/admin/foods', { user: 'admin', method: 'POST', file: png, fields: { name: 'Media Test Food' } }), 201).food;
+    assert.equal(createdFood.image.url, `/api/foods/${createdFood._id}/image`);
+    expectStatus(await request(createdFood.image.url.replace(/^\/api/, '')), 200);
+  });
+  await t.test('a non-admin cannot upload a stall image', async () => {
+    expectStatus(await request('/admin/stalls', { user: 'buyer', method: 'POST', file: png, fields: { stallName: 'Blocked Stall', batch: 'B' } }), 403);
   });
 });

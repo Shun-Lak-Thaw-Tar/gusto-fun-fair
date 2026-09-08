@@ -17,7 +17,7 @@ import { convertReservedToSold, releaseInventory, reserveInventory, ticketsRemai
 import { cancelOrder, declarePayment, releaseExpiredReservations } from '../src/services/orderLifecycleService.js';
 import { reviewPayment } from '../src/services/paymentService.js';
 import { createOrder } from '../src/controllers/orderController.js';
-import { submitPayment } from '../src/controllers/paymentController.js';
+import { preparePaymentUpload, submitPayment } from '../src/controllers/paymentController.js';
 
 const uri = process.env.TEST_MONGODB_URI;
 const ids = {
@@ -72,7 +72,7 @@ test('Backend V1.1 lifecycle', async (t) => {
   await t.test('proof deadline uses configured 30 minutes', () => assert.equal(created.paymentProofExpiresAt - created.paymentDeclaredAt, 1_800_000));
   await t.test('repeated payment declaration is rejected', () => expectStatus(declarePayment(created, now), 409));
   await t.test('cancellation after declaration is rejected', () => expectStatus(cancelOrder(created), 409));
-  await t.test('valid proof submission moves order to submitted while reserved', async () => { const res = response(); await submitPayment({ file, user, params: { orderId: String(created._id) }, body: { paymentProof: { url: '/proof/test.jpg' } } }, res); created = res.body.order; assert.equal(created.status, 'PAYMENT_SUBMITTED'); assert.equal(created.inventoryStatus, 'RESERVED'); });
+  await t.test('valid proof submission moves order to submitted while reserved', async () => { const res = response(); const req = { file, user, params: { orderId: String(created._id) }, body: { paymentProof: { url: '/proof/test.jpg' } } }; await preparePaymentUpload(req); await submitPayment(req, res); created = res.body.order; assert.equal(created.status, 'PAYMENT_SUBMITTED'); assert.equal(created.inventoryStatus, 'RESERVED'); });
   await t.test('submitted orders do not expire through cleanup', async () => { await Order.updateOne({ _id: created._id }, { reservationExpiresAt: new Date(0), paymentProofExpiresAt: new Date(0) }); await releaseExpiredReservations(); assert.equal((await Order.findById(created._id)).status, 'PAYMENT_SUBMITTED'); });
   await t.test('admin approval converts reserved inventory to sold', async () => { const payment = await Payment.findOne({ orderId: created._id }); const before = await StallFood.findById(ids.foodA); const result = await reviewPayment({ paymentId: payment._id, decision: 'APPROVED', adminId: admin._id }); const after = await StallFood.findById(ids.foodA); assert.equal(result.order.status, 'PAYMENT_APPROVED'); assert.equal(after.reservedTickets, before.reservedTickets - 3); assert.equal(after.soldTickets, before.soldTickets + 3); assert.equal(ticketsRemaining(after), ticketsRemaining(before)); });
   await t.test('approval creates exactly one ticket', async () => assert.equal(await Ticket.countDocuments({ orderId: created._id }), 1));
@@ -91,7 +91,7 @@ test('Backend V1.1 lifecycle', async (t) => {
 
   let evidenceExpired;
   await t.test('evidence deadline expiry uses distinct status and releases', async () => { await reserveInventory([{ stallFoodId: ids.foodB, quantity: 1 }]); evidenceExpired = await Order.create({ userId: user._id, items: [{ stallId: ids.stallB, stallFoodId: ids.foodB, stallName: 'B', foodName: 'Tea', quantity: 1, unitPrice: 2000, subtotal: 2000 }], totalQuantity: 1, totalAmount: 2000, paymentReference: 'FF-ORDER-EVIDENCE', reservationExpiresAt: new Date(Date.now() + 10000), status: 'PAYMENT_DECLARED', paymentDeclaredAt: new Date(0), paymentProofExpiresAt: new Date(0) }); await releaseExpiredReservations(); evidenceExpired = await Order.findById(evidenceExpired._id); assert.equal(evidenceExpired.status, 'PAYMENT_EVIDENCE_EXPIRED'); assert.equal(evidenceExpired.inventoryStatus, 'RELEASED'); });
-  await t.test('late proof upload is rejected', () => expectStatus(submitPayment({ file, user, params: { orderId: String(evidenceExpired._id) }, body: { paymentProof: { url: '/late.jpg' } } }, response()), 409));
+  await t.test('late proof upload is rejected', () => expectStatus((async () => { const req = { file, user, params: { orderId: String(evidenceExpired._id) }, body: { paymentProof: { url: '/late.jpg' } } }; await preparePaymentUpload(req); await submitPayment(req, response()); })(), 409));
   await t.test('evidence-expired order cannot be cancelled', () => expectStatus(cancelOrder(evidenceExpired), 409));
 
   let rejected;

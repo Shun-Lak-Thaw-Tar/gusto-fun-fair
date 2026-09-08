@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "gusto-admin",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["Admin/scripts/start-local.mjs"],
+      "port": 5173
+    }
+  ]
+}
