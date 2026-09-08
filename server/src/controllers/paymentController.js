@@ -19,8 +19,20 @@ export const presentPayment = (payment) => ({
   reviewHistory: payment.reviewHistory,
 });
 
-export const submitPayment = async (req, res) => {
+export const preparePaymentUpload = async (req) => {
+  if (!mongoose.isObjectIdOrHexString(req.params.orderId)) throw new ApiError(400, 'Invalid order ID');
   const order = await Order.findOne({ _id: req.params.orderId, userId: req.user._id });
+  try { checkUploadState(order); }
+  catch (error) {
+    if (error.statusCode === 410) await releaseOrderReservation(order._id, 'PAYMENT_DECLARED', 'PAYMENT_EVIDENCE_EXPIRED');
+    throw error;
+  }
+  req.proofUploadOrder = order;
+};
+
+export const submitPayment = async (req, res) => {
+  const order = req.proofUploadOrder;
+  // Recheck after receiving the body, then again inside the transaction.
   try { checkUploadState(order); }
   catch (error) {
     if (error.statusCode === 410) await releaseOrderReservation(order._id, 'PAYMENT_DECLARED', 'PAYMENT_EVIDENCE_EXPIRED');

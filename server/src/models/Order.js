@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { mediaSchemaDefinition } from './shared.js';
 
 export const ORDER_STATUSES = ['AWAITING_PAYMENT', 'PAYMENT_DECLARED', 'PAYMENT_SUBMITTED', 'PAYMENT_REUPLOAD_REQUESTED', 'PAYMENT_APPROVED', 'PAYMENT_REJECTED', 'PAYMENT_EVIDENCE_EXPIRED', 'CANCELLED', 'EXPIRED'];
 export const INVENTORY_STATUSES = ['RESERVED', 'SOLD', 'RELEASED'];
@@ -8,6 +9,7 @@ const orderItemSchema = new mongoose.Schema({
   foodId: { type: mongoose.Schema.Types.ObjectId, ref: 'Food' },
   foodItemId: { type: mongoose.Schema.Types.ObjectId, ref: 'FoodItem' },
   stallName: { type: String, required: true }, foodName: { type: String, required: true },
+  foodImage: mediaSchemaDefinition,
   quantity: { type: Number, required: true, min: 1, validate: Number.isInteger },
   unitPrice: { type: Number, required: true, min: 0 }, subtotal: { type: Number, required: true, min: 0 },
 }, { _id: false });

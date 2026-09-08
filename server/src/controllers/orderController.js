@@ -2,6 +2,7 @@ import { z } from 'zod';
 import StallFood from '../models/StallFood.js';
 import Order from '../models/Order.js';
 import ApiError from '../utils/ApiError.js';
+import { presentOrderWithImages } from '../services/orderPresentationService.js';
 import { priceOrderItems } from '../services/pricingService.js';
 import { releaseInventory, reserveInventory } from '../services/inventoryService.js';
 import { assertOrderingOpen, getCurrentEvent, presentEvent } from '../services/eventService.js';
@@ -44,7 +45,7 @@ export const listMyOrders = async (req, res) => res.json({ orders: await Order.f
 export const getMyOrder = async (req, res) => {
   const order = await Order.findOne({ _id: req.params.id, userId: req.user._id });
   if (!order) throw new ApiError(404, 'Order not found');
-  res.json({ order });
+  res.json({ order: await presentOrderWithImages(order) });
 };
 export const declareMyPayment = async (req, res) => {
   await releaseExpiredReservations();

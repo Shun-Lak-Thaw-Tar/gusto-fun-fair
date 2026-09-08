@@ -13,8 +13,7 @@ import { findAvailableSlug } from '../src/services/stallService.js';
 import { migrateLegacyFoodItems } from '../src/services/foodMigrationService.js';
 
 const assertSafeDatabase = () => {
-  // Multi-host Atlas seed lists are not parseable by new URL(); read the database name directly.
-  const databaseName = /^mongodb(?:\+srv)?:\/\/[^/]*\/([^?]*)/.exec(env.mongoUri)?.[1];
+  const databaseName = new URL(env.mongoUri).pathname.slice(1).split('?')[0];
   if (!databaseName || databaseName === 'admin' || databaseName === 'local' || databaseName === 'config') throw new Error('Refusing to seed an unsafe database target');
 };
 

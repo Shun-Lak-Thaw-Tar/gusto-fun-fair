@@ -16,7 +16,7 @@ const r2 = () => {
 
 // Integration tests replace this adapter; HTTP validation and persistence still run.
 export const mediaStorage = {
-  put: (asset, body) => r2().send(new PutObjectCommand({ Bucket: env.r2Bucket, Key: asset.storageKey, Body: body, ContentType: asset.contentType, CacheControl: 'no-store' })),
+  put: (asset, body) => r2().send(new PutObjectCommand({ Bucket: env.r2Bucket, Key: asset.storageKey, Body: body, ContentType: asset.contentType, CacheControl: 'no-store' }), { abortSignal: AbortSignal.timeout(45_000) }),
   get: (asset) => r2().send(new GetObjectCommand({ Bucket: env.r2Bucket, Key: asset.storageKey })),
   delete: (asset) => r2().send(new DeleteObjectCommand({ Bucket: env.r2Bucket, Key: asset.storageKey })),
 };
@@ -40,7 +40,7 @@ export const validateImage = async (file) => {
 };
 
 export const uploadImage = async ({ file, userId, purpose }) => {
-  if (!['proofs', 'snaps', 'stalls', 'foods'].includes(purpose)) throw new Error('Invalid media purpose');
+  if (!['proofs', 'snaps'].includes(purpose)) throw new Error('Invalid media purpose');
   const { buffer, contentType, extension } = await validateImage(file);
   const asset = await MediaAsset.create({ userId, purpose, storageKey: `${purpose}/${userId}/${randomUUID()}.${extension}`, contentType, size: buffer.length });
   try {

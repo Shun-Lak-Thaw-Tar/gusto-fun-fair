@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const schema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  purpose: { type: String, enum: ['proofs', 'snaps', 'stalls', 'foods'], required: true },
+  purpose: { type: String, enum: ['proofs', 'snaps'], required: true },
   storageKey: { type: String, required: true, unique: true },
   contentType: { type: String, required: true },
   size: { type: Number, required: true },

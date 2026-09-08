@@ -16,6 +16,6 @@ export const priceOrderItems = (requestedItems, stallFoods) => {
     if (!entry || !entry.stallId || !entry.foodId || !entry.isAvailable || !entry.stallId.isActive || !entry.foodId.isActive) throw new ApiError(400, `Stall food ${stallFoodId} is unavailable`);
     if (!Number.isInteger(quantity) || quantity < 1) throw new ApiError(400, 'Quantity must be a positive integer');
     const unitPrice = calculatePreorderPrice(entry.eventDayPrice, entry.discount);
-    return { stallFoodId: entry._id, foodId: entry.foodId._id, stallId: entry.stallId._id, stallName: entry.stallId.stallName, foodName: entry.foodId.name, quantity, unitPrice, subtotal: unitPrice * quantity };
+    return { stallFoodId: entry._id, foodId: entry.foodId._id, stallId: entry.stallId._id, stallName: entry.stallId.stallName, foodName: entry.foodId.name, foodImage: entry.foodId.image ? { url: entry.foodId.image.url || '', storageKey: entry.foodId.image.storageKey || '', provider: entry.foodId.image.provider || '' } : undefined, quantity, unitPrice, subtotal: unitPrice * quantity };
   });
 };

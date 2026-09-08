@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import { networkConfig } from './network.js';
 
 dotenv.config();
 
@@ -22,6 +23,7 @@ export const selectMongoUri = (nodeEnv, source = process.env) => {
 const nodeEnv = process.env.NODE_ENV || 'development';
 const env = {
   nodeEnv,
+  ...networkConfig(nodeEnv),
   port: Number(process.env.PORT) || 5000,
   mongoUri: selectMongoUri(nodeEnv),
   mongoTarget: nodeEnv === 'production' ? 'production/Atlas' : nodeEnv === 'development' ? 'development/local' : 'test/isolated',
