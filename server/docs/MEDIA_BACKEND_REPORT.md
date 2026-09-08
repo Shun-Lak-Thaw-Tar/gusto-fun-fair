@@ -23,6 +23,19 @@ Implementation branch: `codex/r2-media-and-gallery`. Backend scope agreed on 202
 - Admin removal is allowed regardless of the window and permanently consumes that event's slot.
 - Gallery viewing and reactions remain available after the upload window closes.
 
+## Media purposes and visibility
+
+`MediaAsset.purpose` is one of `proofs`, `snaps`, `stalls`, or `foods`. All four share the same STAGED → ATTACHED → DELETE_PENDING lifecycle and R2 storage described below (see Architecture and R2/database cleanup); only their streaming access and whether an image is required differ:
+
+| Purpose | Owner model | Streaming route | Access | Required on upload? |
+| --- | --- | --- | --- | --- |
+| `proofs` | Payment | `GET /api/payments/:id/proofs/:version` | Private — order owner or admin only, via authenticated blob fetch | Required |
+| `snaps` | Memory | `GET /api/memories/:id/image` | Public gallery — anyone, no auth | Required |
+| `stalls` | Stall | `GET /api/stalls/:id/image` | Public — anyone, no auth | Optional (a Stall may have no image) |
+| `foods` | Food | `GET /api/foods/:id/image` | Public — anyone, no auth | Optional (a Food may have no image) |
+
+Public routes (`snaps`, `stalls`, `foods`) respond with `Cross-Origin-Resource-Policy: cross-origin` so either frontend can embed them directly as a plain `<img src>`. The private `proofs` route responds with `Cross-Origin-Resource-Policy: same-site` and requires `Authorization: Bearer <JWT>`; it must be fetched and rendered as a blob URL, never used as a plain image `src`.
+
 ## Architecture
 
 The frontend sends multipart files to Express. The server authenticates the caller, validates and sanitizes the image, and uploads bytes using R2's S3 API. The bucket remains private. Public gallery image requests pass through the API; payment image requests additionally verify ownership/admin role.
@@ -126,6 +139,19 @@ The order status `PAYMENT_REUPLOAD_REQUESTED` corresponds to payment status `REU
 | GET | /api/admin/memories/window | Admin | Read current configuration |
 | PUT | /api/admin/memories/window | Admin | Set opening/closing instants |
 | DELETE | /api/admin/memories/:id | Admin | Remove photo and retain occupied slot |
+
+### Stall and Food image endpoints
+
+| Method | Route | Access | Purpose |
+| --- | --- | --- | --- |
+| POST | /api/admin/stalls | Admin | Create a stall; optional multipart field `image` alongside the existing text fields |
+| PATCH | /api/admin/stalls/:id | Admin | Edit a stall; optional multipart field `image` replaces the current image and queues the previous asset `DELETE_PENDING` |
+| POST | /api/admin/foods | Admin | Create a food; optional multipart field `image` |
+| PATCH | /api/admin/foods/:id | Admin | Edit a food; optional multipart field `image` replaces the current image |
+| GET | /api/stalls/:id/image | Public | Stream the stall's current image bytes |
+| GET | /api/foods/:id/image | Public | Stream the food's current image bytes |
+
+Unlike payment proofs and Snaps, the image field on these four routes is **optional** (`receiveOptionalImage` middleware, not `receiveImage`) — a Stall or Food may be created or kept with no image. There is no JSON `image` object accepted on these routes: the client sends only the file (field name `image`) plus its ordinary text fields in the same `multipart/form-data` body, and the server alone writes the resulting `{ url, storageKey, provider: "r2", assetId }`.
 
 Window request:
 

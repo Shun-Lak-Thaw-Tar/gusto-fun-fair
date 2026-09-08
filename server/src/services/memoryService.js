@@ -14,6 +14,11 @@ export const windowStatus = (settings, now = new Date()) => {
   return now < settings.closesAt ? 'OPEN' : 'CLOSED';
 };
 
+// Mirrors the Crush Letter feature-flag gate: block new participation, leave existing public content and Admin controls untouched.
+export const assertMemoriesEnabled = (event) => {
+  if (!event?.featureFlags?.memoriesEnabled) throw new ApiError(409, 'The Memories feature is currently disabled.');
+};
+
 export const assertSnapWindow = async (eventId, session) => {
   const settings = await SnapSettings.findOne({ eventId }).session(session || null);
   if (windowStatus(settings) !== 'OPEN') throw new ApiError(409, 'Snap uploads are outside the configured window');
