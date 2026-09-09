@@ -57,7 +57,7 @@ export function StallOwnerLayout({user,logout}){
  return <div className="so-shell">
   <header className="so-topbar">
    <div className="so-topbar-row">
-    <NavLink to="/stall-owner/dashboard" className="so-brand"><img className="gusto-logo" src="/gusto-logo.png" alt="Gusto College logo"/><span>GUSTO FUN FAIR</span></NavLink>
+    <NavLink to="/dashboard" className="so-brand"><img className="gusto-logo" src="/gusto-logo.png" alt="Gusto College logo"/><span>GUSTO FUN FAIR</span></NavLink>
     <div className="so-topbar-stall"><small>MY STALL</small><strong>{resource.data?.stall?.stallName||'…'}</strong></div>
     <div className="so-topbar-account">
      <span className="so-owner-name">{user.name}</span>
@@ -66,7 +66,7 @@ export function StallOwnerLayout({user,logout}){
     </div>
    </div>
    <nav className={`so-nav ${open?'open':''}`} aria-label="Stall owner navigation">
-    {navigation.map(([path,title])=><NavLink key={path} to={`/stall-owner/${path}`} onClick={()=>setOpen(false)}>{title}</NavLink>)}
+    {navigation.map(([path,title])=><NavLink key={path} to={`/${path}`} onClick={()=>setOpen(false)}>{title}</NavLink>)}
    </nav>
   </header>
   {open&&<button className="scrim" aria-label="Close navigation" onClick={()=>setOpen(false)}/>}
@@ -100,7 +100,7 @@ export function OwnerDashboard(){
     <p className="so-eyebrow">MY STALL</p>
     <h2>{stall.stallName}</h2>
     <p>{stall.description||'No description has been added for this stall yet.'}</p>
-    <Link className="so-text-link" to="/stall-owner/stall">View my stall →</Link>
+    <Link className="so-text-link" to="/stall">View my stall →</Link>
    </div>
   </section>
 
@@ -111,7 +111,7 @@ export function OwnerDashboard(){
    </section>
    <section className="so-panel">
     <SectionTitle note="Your items only">Recent orders</SectionTitle>
-    {orders.orders.length?<><div className="so-order-list">{orders.orders.slice(0,5).map(order=><RecentOrderCard key={order.orderId} order={order}/>)}</div><Link className="so-text-link" to="/stall-owner/orders">View all orders →</Link></>:<Empty title="No approved orders yet" hint="Approved customer orders containing your foods appear here."/>}
+    {orders.orders.length?<><div className="so-order-list">{orders.orders.slice(0,5).map(order=><RecentOrderCard key={order.orderId} order={order}/>)}</div><Link className="so-text-link" to="/orders">View all orders →</Link></>:<Empty title="No approved orders yet" hint="Approved customer orders containing your foods appear here."/>}
    </section>
   </div>
  </>}</State>;

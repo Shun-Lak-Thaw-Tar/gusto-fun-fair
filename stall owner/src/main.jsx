@@ -9,7 +9,7 @@ import {StallOwnerLayout,OwnerDashboard,OwnerStall,OwnerMenu,OwnerOrders,OwnerSa
 import PublicInvitation from './invite';
 
 function Login({user,onLogin}){
- if(user)return <Navigate to="/stall-owner/dashboard" replace/>;
+ if(user)return <Navigate to="/dashboard" replace/>;
  return <div className="so-login">
   <div className="so-login-brand">
    <img className="gusto-logo" src="/gusto-logo.png" alt="Gusto College logo"/>
@@ -49,7 +49,7 @@ function App(){
  return <Routes>
   <Route path="/invite/:slug" element={<PublicInvitation/>}/>
   <Route path="/login" element={<Login user={user} onLogin={setUser}/>}/>
-  <Route path="/stall-owner" element={user?<StallOwnerLayout user={user} logout={logout}/>:<Navigate to="/login" replace/>}>
+  <Route path="/" element={user?<StallOwnerLayout user={user} logout={logout}/>:<Navigate to="/login" replace/>}>
    <Route index element={<Navigate to="dashboard" replace/>}/>
    <Route path="dashboard" element={<OwnerDashboard/>}/>
    <Route path="stall" element={<OwnerStall/>}/>
@@ -59,8 +59,8 @@ function App(){
    <Route path="share" element={<OwnerShare/>}/>
    <Route path="*" element={<p>Page not found. Choose a page from the navigation.</p>}/>
   </Route>
-  <Route path="*" element={<Navigate to={user?'/stall-owner/dashboard':'/login'} replace/>}/>
+  <Route path="*" element={<Navigate to={user?'/dashboard':'/login'} replace/>}/>
  </Routes>;
 }
 
-createRoot(document.getElementById('root')).render(<React.StrictMode><BrowserRouter><App/></BrowserRouter></React.StrictMode>);
+createRoot(document.getElementById('root')).render(<React.StrictMode><BrowserRouter basename="/stall-owner"><App/></BrowserRouter></React.StrictMode>);
