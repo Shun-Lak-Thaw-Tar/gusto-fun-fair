@@ -28,4 +28,6 @@ const orderSchema = new mongoose.Schema({
   paymentProofExpiresAt: { type: Date, index: true },
 }, { timestamps: true });
 
+orderSchema.index({ userId: 1, createdAt: -1 });
+
 export default mongoose.model('Order', orderSchema);

@@ -14,7 +14,7 @@ const eventConfigSchema = new mongoose.Schema({
   kbzAccountName: { type: String, trim: true, default: '' }, kbzAccountNumber: { type: String, trim: true, default: '' },
   paymentInstructions: { type: String, trim: true, default: '' }, orderingEnabled: { type: Boolean, default: false },
   featureFlags: { type: featureFlagsSchema, default: () => ({}) },
-  orderReservationMinutes: { type: Number, min: 1, validate: Number.isInteger, default: 60 },
+  orderReservationMinutes: { type: Number, min: 1, validate: Number.isInteger, default: 30 },
   paymentProofGraceMinutes: { type: Number, min: 1, validate: Number.isInteger, default: 30 },
 }, { timestamps: true });
 

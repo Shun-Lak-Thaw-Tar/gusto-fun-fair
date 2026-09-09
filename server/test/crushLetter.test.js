@@ -10,10 +10,11 @@ import Stall from '../src/models/Stall.js';
 import User from '../src/models/User.js';
 import { crushLetterSubmissionLimiter } from '../src/middleware/crushLetterRateLimit.js';
 
-const uri = 'mongodb://127.0.0.1:27017/funfair_crush_letter_test';
+const uri = process.env.TEST_MONGODB_URI;
 
 test('Crush Letter V1.1', async (t) => {
-  await mongoose.connect(uri);
+  if (!uri) throw new Error('Run npm test to use the isolated test database');
+  await mongoose.connect(uri, { dbName: `funfair_crush_letter_test_${process.pid}` });
   await mongoose.connection.dropDatabase();
   await Promise.all([CrushLetter.init(), EventConfig.init(), Stall.init(), User.init()]);
   await EventConfig.create({ configKey: 'current', eventName: 'Crush Test Event', eventDate: new Date('2032-09-11T09:00:00Z'), preorderOpenAt: new Date('2032-09-08T09:00:00Z'), preorderCloseAt: new Date('2032-09-10T09:00:00Z'), featureFlags: { memoriesEnabled: true, eventPageEnabled: true } });

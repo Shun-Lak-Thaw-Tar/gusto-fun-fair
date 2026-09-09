@@ -11,10 +11,11 @@ import Stall from '../src/models/Stall.js';
 import Ticket from '../src/models/Ticket.js';
 import User from '../src/models/User.js';
 
-const databaseUri = 'mongodb://127.0.0.1:27017/funfair_admin_dashboard_test';
+const databaseUri = process.env.TEST_MONGODB_URI;
 
 test('Admin Dashboard metrics and authorization', async (t) => {
-  await mongoose.connect(databaseUri);
+  if (!databaseUri) throw new Error('Run npm test to use the isolated test database');
+  await mongoose.connect(databaseUri, { dbName: `funfair_admin_dashboard_test_${process.pid}` });
   await mongoose.connection.dropDatabase();
 
   const [admin, user] = await User.create([

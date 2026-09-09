@@ -1,18 +1,16 @@
+import mongoose from 'mongoose';
 import Order from '../models/Order.js';
 import ApiError from '../utils/ApiError.js';
 import { getCurrentEvent } from './eventService.js';
-import { releaseInventory } from './inventoryService.js';
+import { settleReservedInventory } from './inventoryService.js';
 
 export const releaseOrderReservation = async (orderId, expectedStatus, finalStatus) => {
-  const order = await Order.findOneAndUpdate({ _id: orderId, status: expectedStatus, inventoryStatus: 'RESERVED' }, { status: finalStatus, inventoryStatus: 'RELEASED' }, { new: true });
-  if (!order) return null;
-  try {
-    await releaseInventory(order.items);
+  return mongoose.connection.transaction(async (session) => {
+    const order = await Order.findOneAndUpdate({ _id: orderId, status: expectedStatus, inventoryStatus: 'RESERVED' }, { status: finalStatus, inventoryStatus: 'RELEASED' }, { new: true, session });
+    if (!order) return null;
+    await settleReservedInventory(order.items, false, session);
     return order;
-  } catch (error) {
-    await Order.updateOne({ _id: order._id, status: finalStatus, inventoryStatus: 'RELEASED' }, { status: expectedStatus, inventoryStatus: 'RESERVED' });
-    throw error;
-  }
+  });
 };
 
 export const releaseExpiredReservations = async (now = new Date()) => {

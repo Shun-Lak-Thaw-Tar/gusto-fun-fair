@@ -9,10 +9,11 @@ import Stall from '../src/models/Stall.js';
 import User from '../src/models/User.js';
 import { assertOrderingOpen, derivePreorderStatus } from '../src/services/eventService.js';
 
-const uri = 'mongodb://127.0.0.1:27017/funfair_v131_test';
+const uri = process.env.TEST_MONGODB_URI;
 
 test('Backend V1.3.1 event schedule and feature controls', async (t) => {
-  await mongoose.connect(uri);
+  if (!uri) throw new Error('Run npm test to use the isolated test database');
+  await mongoose.connect(uri, { dbName: `funfair_v131_test_${process.pid}` });
   await mongoose.connection.dropDatabase();
   await Promise.all([EventConfig.init(), Stall.init(), User.init()]);
   const eventDate = new Date('2032-09-11T03:00:00.000Z');

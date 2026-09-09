@@ -1,3 +1,4 @@
+import { releaseExpiredReservations } from './services/orderLifecycleService.js';
 import app from './app.js';
 import { connectDatabase, disconnectDatabase } from './config/db.js';
 import env, { assertRuntimeEnv } from './config/env.js';
@@ -6,10 +7,13 @@ import { cleanupMedia } from './services/mediaService.js';
 
 let server;
 let mediaTimer;
+let reservationTimer;
+let reservationsRunning = false;
 let cleanupRunning = false;
 const shutdown = async (signal) => {
   console.log(`${signal} received; shutting down`);
   clearInterval(mediaTimer);
+  clearInterval(reservationTimer);
   if (server) await new Promise((resolve) => server.close(resolve));
   await disconnectDatabase();
   process.exit(0);
@@ -19,6 +23,13 @@ try {
   assertRuntimeEnv();
   await connectDatabase();
   console.log(`MongoDB connected (${env.mongoTarget})`);
+  reservationTimer = setInterval(async () => {
+    if (reservationsRunning) return;
+    reservationsRunning = true;
+    try { await releaseExpiredReservations(); } catch { console.error('Reservation cleanup failed; will retry'); }
+    finally { reservationsRunning = false; }
+  }, 30_000);
+  reservationTimer.unref();
   mediaTimer = setInterval(async () => {
     if (cleanupRunning) return;
     cleanupRunning = true;

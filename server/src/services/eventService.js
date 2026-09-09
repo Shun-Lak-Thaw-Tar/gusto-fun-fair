@@ -1,3 +1,4 @@
+import { reservationMinutes } from './orderPolicy.js';
 import EventConfig from '../models/EventConfig.js';
 import ApiError from '../utils/ApiError.js';
 
@@ -32,7 +33,7 @@ export const presentEvent = (config, now = new Date(), includePayment = false) =
     eventPageEnabled: config.featureFlags?.eventPageEnabled ?? false,
     crushLettersEnabled: config.featureFlags?.crushLettersEnabled ?? false,
   },
-  orderReservationMinutes: config.orderReservationMinutes,
+  orderReservationMinutes: reservationMinutes(config),
   paymentProofGraceMinutes: config.paymentProofGraceMinutes,
   ...(includePayment ? { kbzAccountName: config.kbzAccountName, kbzAccountNumber: config.kbzAccountNumber, paymentInstructions: config.paymentInstructions } : {}),
 });

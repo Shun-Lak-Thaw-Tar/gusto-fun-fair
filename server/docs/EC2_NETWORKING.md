@@ -7,7 +7,8 @@ its existing all-interface binding and does not trust forwarded headers.
 Express trusts only the nearest proxy when its connection comes from an exact
 loopback address. This is for Nginx on the same EC2 instance, not an ALB,
 container network, or arbitrary chain of proxies. Run one backend process;
-rate-limit counters are in memory and reset on restart.
+authentication/upload rate-limit counters are in memory and reset on restart.
+The three-orders-per-hour account limit uses persisted MongoDB order history.
 
 Place this location in Nginx's **HTTPS server block** during deployment:
 
@@ -42,6 +43,8 @@ Authentication limits run before database queries/password hashing:
 - Shared ceiling: 600 login + registration attempts per 5 minutes per IP.
 - Login: 15 failed attempts per 15 minutes per normalized name + IP; successful
   logins do not consume this tighter quota. Unknown names receive the same limit.
+- Signup shared-IP ceiling: 100 registration attempts per 15 minutes, across
+  names. This leaves room for campus Wi-Fi while slowing bulk account creation.
 - Registration: 5 attempts per 15 minutes per normalized name + IP, including
   successes and failures. Other students/names have independent quotas.
 - IPv6 addresses are grouped by subnet. Names are hashed for limiter keys;
