@@ -1,3 +1,4 @@
+import { reservationMinutes } from "./orderPolicy.js";
 import EventConfig from "../models/EventConfig.js";
 import ApiError from "../utils/ApiError.js";
 
@@ -80,7 +81,7 @@ export const presentEvent = (
     crushLettersEnabled: config.featureFlags?.crushLettersEnabled ?? false,
     quizEnabled: config.featureFlags?.quizEnabled ?? false,
   },
-  orderReservationMinutes: config.orderReservationMinutes,
+  orderReservationMinutes: reservationMinutes(config),
   paymentProofGraceMinutes: config.paymentProofGraceMinutes,
   ...(includePayment
     ? {

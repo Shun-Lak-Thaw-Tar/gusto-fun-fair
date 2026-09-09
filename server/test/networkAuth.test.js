@@ -40,7 +40,7 @@ const authApp = settings => {
   app.use(express.json());
   const handler = (req, res) => { calls++; res.status(req.body.success ? 200 : 401).json({ ok: !!req.body.success }); };
   app.post('/login', limits.sharedIp, limits.login, handler);
-  app.post('/register', limits.sharedIp, limits.register, handler);
+  app.post('/register', limits.sharedIp, limits.signupIp, limits.register, handler);
   return { app, getCalls: () => calls };
 };
 const attempt = async (base, path, name, success = false, ip = '198.51.100.20') => {
@@ -86,4 +86,13 @@ test('rotating IPv6 addresses within one subnet does not bypass the shared limit
   const { app } = authApp({ ...AUTH_LIMITS, ipAttempts: 1 }), { base } = await serve(t, app);
   assert.equal((await attempt(base, '/login', 'A', false, '2001:db8:1234::1')).status, 401);
   assert.equal((await attempt(base, '/login', 'B', false, '2001:db8:1234::2')).status, 429);
+});
+
+test('signup IP limit stops rotating names without blocking login or other connections', async t => {
+  const { app } = authApp({ ...AUTH_LIMITS, signupIpAttempts: 3 }), { base } = await serve(t, app);
+  for (const name of ['A', 'B', 'C']) assert.equal((await attempt(base, '/register', name, true)).status, 200);
+  const blocked = await attempt(base, '/register', 'D', true);
+  assert.equal(blocked.status, 429); assert.ok(blocked.retry > 0);
+  assert.equal((await attempt(base, '/login', 'A', true)).status, 200);
+  assert.equal((await attempt(base, '/register', 'D', true, '198.51.100.21')).status, 200);
 });

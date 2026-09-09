@@ -9,6 +9,7 @@ export const errorHandler = (error, _req, res, next) => {
   if (error instanceof mongoose.Error.DocumentNotFoundError) { status = 404; message = 'Record not found'; }
   if (error instanceof mongoose.Error.CastError) { status = 400; message = `Invalid ${error.path}`; }
   if (error?.code === 11000) { status = 409; message = 'A record with that value already exists'; }
+  if (status === 429 && error.details?.retryAfterSeconds) res.set('Retry-After', String(error.details.retryAfterSeconds));
   const body = { error: { message } };
   if (error.details) body.error.details = error.details;
   if (env.nodeEnv !== 'production' && status === 500) body.error.stack = error.stack;

@@ -7,7 +7,7 @@ import Payment from '../src/models/Payment.js';
 import { requireAdmin } from '../src/middleware/adminMiddleware.js';
 import generatePaymentReference from '../src/utils/generatePaymentReference.js';
 
-test('EventConfig defaults reservation time to 60 minutes', () => assert.equal(new EventConfig().orderReservationMinutes, 60));
+test('EventConfig defaults reservation time to 30 minutes', () => assert.equal(new EventConfig().orderReservationMinutes, 30));
 test('EventConfig defaults proof grace to 30 minutes', () => assert.equal(new EventConfig().paymentProofGraceMinutes, 30));
 test('EventConfig allows closing less than one day before the event', async () => {
   const event = new EventConfig({ eventName: 'X', eventDate: new Date('2030-01-02'), preorderOpenAt: new Date('2029-01-01'), preorderCloseAt: new Date('2030-01-01T12:00:00Z') });

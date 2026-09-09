@@ -6,6 +6,7 @@ const userSchema = new mongoose.Schema({
   passwordHash: { type: String, required: true, select: false },
   role: { type: String, enum: ['user', 'admin', 'stall_owner'], default: 'user' },
   stallId: { type: mongoose.Schema.Types.ObjectId, ref: 'Stall' },
+  orderPlacementVersion: { type: Number, default: 0, select: false },
   isActive: { type: Boolean, default: true },
 }, { timestamps: true });
 
@@ -16,5 +17,5 @@ userSchema.pre('validate', function validateOwnerStall(next) {
   return next();
 });
 
-userSchema.set('toJSON', { transform: (_doc, value) => { delete value.passwordHash; delete value.nameNormalized; return value; } });
+userSchema.set('toJSON', { transform: (_doc, value) => { delete value.orderPlacementVersion; delete value.passwordHash; delete value.nameNormalized; return value; } });
 export default mongoose.model('User', userSchema);

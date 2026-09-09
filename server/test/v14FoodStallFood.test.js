@@ -13,10 +13,11 @@ import StallFood from '../src/models/StallFood.js';
 import User from '../src/models/User.js';
 import { migrateLegacyFoodItems } from '../src/services/foodMigrationService.js';
 
-const uri = 'mongodb://127.0.0.1:27017/funfair_v14_test';
+const uri = process.env.TEST_MONGODB_URI;
 
 test('Backend V1.4 Food and StallFood redesign', async (t) => {
-  await mongoose.connect(uri);
+  if (!uri) throw new Error('Run npm test to use the isolated test database');
+  await mongoose.connect(uri, { dbName: `funfair_v14_test_${process.pid}` });
   await mongoose.connection.dropDatabase();
   await Promise.all([Food.init(), Stall.init(), StallFood.init(), User.init()]);
   const now = Date.now();
@@ -56,6 +57,7 @@ test('Backend V1.4 Food and StallFood redesign', async (t) => {
 
   await t.test('canonical order rejects client pricing fields', async () => assert.equal((await request('/orders', { method: 'POST', account: customer, body: { items: [{ stallFoodId: menuA._id, quantity: 1, subtotal: 1 }] } })).status, 400));
   const orderResponse = await request('/orders', { method: 'POST', account: customer, body: { items: [{ stallFoodId: menuA._id, quantity: 2 }] } });
+  assert.equal(orderResponse.status, 201, JSON.stringify(orderResponse.body));
   const orderId = orderResponse.body.order._id;
   await t.test('canonical order uses authoritative StallFood pricing and snapshots', () => { const item = orderResponse.body.order.items[0]; assert.equal(orderResponse.status, 201); assert.equal(item.stallFoodId, menuA._id); assert.equal(item.foodId, burger._id); assert.equal(item.unitPrice, 4500); assert.equal(item.subtotal, 9000); assert.equal(orderResponse.body.order.totalAmount, 9000); });
   await t.test('ordering one stall leaves the other stall inventory unchanged', async () => { const [a, b] = await Promise.all([StallFood.findById(menuA._id), StallFood.findById(menuB._id)]); assert.equal(a.reservedTickets, 2); assert.equal(b.reservedTickets, 0); });

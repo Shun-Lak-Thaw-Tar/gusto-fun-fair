@@ -1,4 +1,5 @@
 import StallFood from '../models/StallFood.js';
+import { maxOrderQuantity } from './orderPolicy.js';
 import ApiError from '../utils/ApiError.js';
 
 export const ticketsRemaining = (food) => Math.max(0, food.ticketLimit - (food.reservedTickets || 0) - (food.soldTickets || 0));
@@ -67,5 +68,19 @@ export const settleReservedInventory = async (items, approved, session) => {
       { session },
     );
     if (result.modifiedCount !== 1) throw new ApiError(409, 'Reserved inventory changed; payment review could not complete');
+  }
+};
+
+// The order, user lock and every stock update commit or roll back together.
+export const reserveOrderInventory = async (items, session) => {
+  if (!session) throw new Error('Order reservation requires a database transaction');
+  for (const item of [...items].sort((a, b) => String(a.stallFoodId).localeCompare(String(b.stallFoodId)))) {
+    const food = await StallFood.findById(item.stallFoodId).session(session);
+    const remaining = food ? ticketsRemaining(food) : 0;
+    const maxQuantity = maxOrderQuantity(remaining);
+    if (!food?.isAvailable || !remaining) throw new ApiError(409, `${item.foodName} just sold out. Please remove it from your cart.`, { code: 'ORDER_QUANTITY_LIMIT', stallFoodId: String(item.stallFoodId), maxQuantity: 0, ticketsRemaining: 0 });
+    if (item.quantity > maxQuantity) throw new ApiError(409, `${item.foodName}: please choose up to ${maxQuantity} per order${remaining <= 5 ? ' while stock is low' : ''}, so everyone gets a chance.`, { code: 'ORDER_QUANTITY_LIMIT', stallFoodId: String(item.stallFoodId), maxQuantity, ticketsRemaining: remaining });
+    const result = await StallFood.updateOne({ _id: food._id, reservedTickets: food.reservedTickets, soldTickets: food.soldTickets }, { $inc: { reservedTickets: item.quantity } }, { session });
+    if (result.modifiedCount !== 1) throw new ApiError(409, 'Availability changed. Please refresh your cart and try again.');
   }
 };

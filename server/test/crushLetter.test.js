@@ -10,10 +10,11 @@ import Stall from "../src/models/Stall.js";
 import User from "../src/models/User.js";
 import { crushLetterSubmissionLimiter } from "../src/middleware/crushLetterRateLimit.js";
 
-const uri = "mongodb://127.0.0.1:27017/funfair_crush_letter_test";
+const uri = process.env.TEST_MONGODB_URI;
 
 test("Crush Letter V1.1", async (t) => {
-  await mongoose.connect(uri);
+  if (!uri) throw new Error("Run npm test with the isolated replica set");
+  await mongoose.connect(uri, { dbName: `funfair_crush_letter_test_${process.pid}` });
   await mongoose.connection.dropDatabase();
   await Promise.all([
     CrushLetter.init(),

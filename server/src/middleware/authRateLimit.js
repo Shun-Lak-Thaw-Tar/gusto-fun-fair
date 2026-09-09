@@ -4,6 +4,7 @@ import { ipKeyGenerator, rateLimit } from 'express-rate-limit';
 // A generous shared-IP ceiling accommodates students using campus Wi-Fi.
 // Tighter limits isolate repeated attempts at one name from one IP/subnet.
 export const AUTH_LIMITS = Object.freeze({
+  signupIpAttempts: 100, signupIpWindowMs: 15 * 60_000,
   ipAttempts: 600, ipWindowMs: 5 * 60_000,
   loginFailures: 15, registrationAttempts: 5, accountWindowMs: 15 * 60_000,
 });
@@ -27,6 +28,8 @@ const limiter = (options, message) => rateLimit({
 });
 
 export const createAuthLimiters = (settings = AUTH_LIMITS) => ({
+  signupIp: limiter({ windowMs: settings.signupIpWindowMs ?? AUTH_LIMITS.signupIpWindowMs, limit: settings.signupIpAttempts ?? AUTH_LIMITS.signupIpAttempts },
+    'Many signup attempts were made from this connection recently. Please wait up to 15 minutes, or sign in if you already have an account.'),
   sharedIp: limiter({ windowMs: settings.ipWindowMs, limit: settings.ipAttempts },
     'There have been many sign-in or registration attempts from this connection. Please wait a few minutes and try again.'),
   login: limiter({ windowMs: settings.accountWindowMs, limit: settings.loginFailures, keyGenerator: accountKey, skipSuccessfulRequests: true },
