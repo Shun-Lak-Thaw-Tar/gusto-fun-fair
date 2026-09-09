@@ -1,270 +1,214 @@
-/* Stall Owner Portal — the five-colour palette used as a visual system. */
-.so-shell{display:flex;min-height:100vh;background:var(--bg);color:var(--navy)}
-.so-shell .scrim{inset:0}
+/* Stall Owner Portal — warm editorial identity: cream + warm white + deep olive ink dominate; terracotta/sage/gold are sparing accents only. */
+.so-shell{display:flex;flex-direction:column;min-height:100vh;background:var(--cream);color:var(--ink)}
 
-/* Sidebar */
-.so-sidebar{width:256px;flex:0 0 256px;background:var(--navy);color:var(--bg);display:flex;flex-direction:column;gap:18px;padding:20px 14px;position:sticky;top:0;height:100vh;overflow-y:auto;z-index:15}
-.so-brand{display:flex;align-items:center;gap:11px;padding:4px 8px 16px;border-bottom:1px solid #5DCAD133}
-.so-brand span{display:flex;flex-direction:column;line-height:1.3}
-.so-brand strong{font-size:16px;letter-spacing:2px;color:var(--bg)}
-.so-brand small{font-size:10px;letter-spacing:.6px;color:var(--light)}
-.so-sidebar nav{display:flex;flex-direction:column;gap:3px}
-.so-nav-section{margin:16px 0 6px;padding:0 10px 7px;font-size:9px;font-weight:700;letter-spacing:1.6px;color:var(--light);border-bottom:1px solid #5DCAD126}
-.so-sidebar a{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;color:var(--bg);font-size:12.5px;font-weight:600}
-.so-nav-icon{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;background:#5DCAD11A;flex-shrink:0}
-.so-sidebar a:hover{background:#457B9D66}
-.so-sidebar a:hover .so-nav-icon{background:var(--light);color:var(--navy)}
-.so-sidebar a.active{background:var(--blue);box-shadow:inset 3px 0 var(--red)}
-.so-sidebar a.active .so-nav-icon{background:var(--bg);color:var(--blue)}
-.so-sidebar-footer{margin-top:auto;padding:14px 10px 4px;border-top:1px solid #5DCAD133;font-size:11px;color:var(--light);display:flex;flex-direction:column;gap:3px}
-.so-sidebar-footer small{color:#5DCAD1B0}
+/* Top navigation — a public-website-style header, not a filled admin sidebar */
+.so-topbar{background:var(--cream);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:15}
+.so-topbar-row{display:flex;align-items:center;gap:20px;padding:14px 26px}
+.so-brand{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.so-brand .gusto-logo{width:32px;height:32px}
+.so-brand span{font-size:12px;font-weight:800;letter-spacing:2px;color:var(--ink)}
+.so-topbar-stall{display:flex;flex-direction:column;line-height:1.3;min-width:0;padding-left:20px;border-left:1px solid var(--border)}
+.so-topbar-stall small{font-size:9px;font-weight:700;letter-spacing:1.5px;color:var(--muted)}
+.so-topbar-stall strong{font-size:15px;letter-spacing:-.3px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:26ch}
+.so-topbar-account{display:flex;align-items:center;gap:14px;margin-left:auto}
+.so-owner-name{font-size:12.5px;font-weight:650;color:var(--ink)}
+.so-signout{background:transparent;border:0;padding:4px 2px;color:var(--muted);font-weight:650;text-decoration:underline;text-underline-offset:3px}
+.so-signout:hover{background:transparent;color:var(--terracotta)}
+.so-menu-toggle{display:none;font-size:16px;padding:6px 10px}
 
-/* Shell, header, footer */
-.so-main{flex:1;min-width:0;display:flex;flex-direction:column}
-.so-header{display:flex;align-items:center;gap:16px;padding:13px 26px;background:var(--bg);border-bottom:3px solid var(--light);position:sticky;top:0;z-index:10}
-.so-menu{display:none}
-.so-header-stall{display:flex;flex-direction:column;line-height:1.35;min-width:0}
-.so-header-stall small{font-size:9px;font-weight:700;letter-spacing:1.5px;color:var(--blue)}
-.so-header-stall strong{font-size:18px;letter-spacing:-.4px;color:var(--navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.so-account{display:flex;align-items:center;gap:12px;margin-left:auto}
-.so-account>div{display:flex;flex-direction:column;align-items:flex-end;line-height:1.35}
-.so-account strong{font-size:12.5px}
-.so-account small{font-size:10px;color:var(--blue)}
-.so-avatar{display:grid;place-items:center;width:38px;height:38px;border-radius:10px;background:var(--blue);color:var(--bg);font-weight:700;font-size:15px;flex-shrink:0}
-.so-content{margin-left:0;padding:24px 26px;max-width:1700px;display:flex;flex-direction:column;gap:22px}
-.so-footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:16px 26px;border-top:1px solid #457B9D30;font-size:11px;color:var(--blue)}
+.so-nav{display:flex;gap:28px;padding:0 26px 14px}
+.so-nav a{position:relative;padding:4px 1px;font-size:12.5px;font-weight:650;letter-spacing:.2px;color:var(--ink)}
+.so-nav a::after{content:'';position:absolute;left:0;right:0;bottom:-6px;height:2px;background:var(--terracotta);transform:scaleX(0);transform-origin:left;transition:transform .15s}
+.so-nav a:hover::after{transform:scaleX(.55)}
+.so-nav a.active{color:var(--terracotta)}
+.so-nav a.active::after{transform:scaleX(1)}
 
-/* Hero greeting */
-.so-hero{display:flex;align-items:center;gap:18px;background:var(--navy);color:var(--bg);border-left:6px solid var(--red);border-radius:14px;padding:26px 28px}
-.so-hero h1{margin:6px 0 8px;font-size:29px;letter-spacing:-.8px;color:var(--bg)}
-.so-hero p{margin:0;color:var(--light);font-size:13.5px}
-.so-hero strong{color:var(--bg)}
-.so-eyebrow{margin:0;font-size:9.5px;font-weight:700;letter-spacing:2px;color:var(--light)}
-.so-hero-tag{margin-left:auto;flex-shrink:0;background:var(--gold);color:var(--navy);border-radius:999px;padding:8px 16px;font-size:11px;font-weight:700;letter-spacing:.6px}
+.so-content{padding:32px 26px 40px;max-width:1180px;width:100%;margin:0 auto;display:flex;flex-direction:column;gap:34px}
+.so-footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:18px 26px;border-top:1px solid var(--border);font-size:11px;color:var(--muted)}
 
-/* Statistic cards */
-.so-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
-.so-stat{display:flex;flex-direction:column;gap:4px;padding:22px;border-radius:14px;background:var(--light);color:var(--navy);border-left:6px solid var(--blue)}
-.so-stat-icon{display:grid;place-items:center;width:42px;height:42px;border-radius:11px;background:#E6394618;margin-bottom:8px}
-.so-stat strong{font-size:40px;line-height:1;letter-spacing:-1.6px}
-.so-stat span{font-size:11px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase}
-.so-stat small{font-size:10.5px;color:var(--blue);margin-top:2px}
-.so-stat.blue{background:var(--blue);color:var(--bg);border-left-color:var(--navy)}
-.so-stat.blue small{color:var(--light)}
-.so-stat.blue .so-stat-icon{background:#FFFAE826}
-.so-stat.navy{background:var(--navy);color:var(--bg);border-left-color:var(--light)}
-.so-stat.navy small{color:var(--light)}
-.so-stat.navy .so-stat-icon{background:#5DCAD126}
-.so-stat.red{background:var(--red);color:var(--bg);border-left-color:var(--navy)}
-.so-stat.red small{color:var(--bg)}
-.so-stat.red .so-stat-icon{background:#FFFAE826}
-.so-stat.red strong{font-size:32px}
-.so-stat.light{border-left-color:var(--red)}
+/* Page-level editorial heading, used by SectionTitle on plain pages (no hero) */
+.so-content>.so-section-title{background:transparent;padding:0 0 16px;margin-bottom:0;border-bottom:1px solid var(--border);align-items:baseline}
+.so-content>.so-section-title h2{font-family:var(--font-display);font-weight:400;font-size:32px;letter-spacing:-.6px;color:var(--ink)}
+.so-content>.so-section-title span{font-size:11px;color:var(--muted)}
 
-/* Revenue banner */
-.so-revenue{background:var(--red);color:var(--bg);border-radius:14px;padding:26px 28px;text-align:center;border-bottom:6px solid var(--navy)}
-.so-revenue p{margin:0;font-size:10px;font-weight:700;letter-spacing:2.6px}
-.so-revenue strong{display:block;margin:8px 0 4px;font-size:46px;line-height:1.05;letter-spacing:-1.8px}
-.so-revenue small{color:#FFFAE8CC;font-size:11px}
+/* Hero greeting (Dashboard / Sales / Share) */
+.so-hero{display:flex;align-items:flex-end;gap:20px;position:relative;padding:4px 0 10px}
+.so-hero::before{content:'';position:absolute;left:-40px;top:-30px;width:180px;height:180px;border:1px solid #8FAF9A70;border-radius:50%;pointer-events:none;z-index:0}
+.so-hero-text{position:relative;z-index:1;flex:1;min-width:0}
+.so-eyebrow{margin:0 0 6px;font-size:10px;font-weight:700;letter-spacing:2.2px;color:var(--muted)}
+.so-hero h1{font-family:var(--font-display);font-weight:400;font-size:42px;line-height:1.05;letter-spacing:-1px;color:var(--ink);margin:0 0 10px}
+.so-hero p{margin:0;color:var(--muted);font-size:14px}
+.so-hero .banner-mascot{position:relative;z-index:1}
+.so-hero-compact{padding-bottom:6px}
+.so-hero-compact h1{font-size:38px}
+
+/* Statistic strip — plain typography separated by hairlines, not floating cards */
+.so-stats{display:flex;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.so-stat{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;padding:20px 24px}
+.so-stat+.so-stat{border-left:1px solid var(--border)}
+.so-stat strong{font-family:var(--font-display);font-weight:400;font-size:34px;letter-spacing:-1px;color:var(--ink);line-height:1}
+.so-stat span{font-size:10px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted)}
+.so-stat small{font-size:10.5px;color:var(--muted)}
+.so-stat.red strong{color:var(--terracotta)}
+
+/* My Stall feature (dashboard teaser + full page) */
+.so-feature{display:grid;grid-template-columns:280px 1fr;gap:26px;align-items:center}
+.so-feature-image,.so-stall-feature-image,.so-food-image,.so-share-image{display:grid;place-items:center;background:var(--soft);color:var(--muted);border-radius:14px;overflow:hidden;min-height:190px}
+.so-feature-image img,.so-stall-feature-image img,.so-food-image img,.so-share-image img{width:100%;height:100%;object-fit:cover}
+.so-feature-body h2{font-family:var(--font-display);font-weight:400;font-size:28px;letter-spacing:-.5px;margin:2px 0 8px;color:var(--ink)}
+.so-feature-body p{color:var(--body);margin:0 0 12px}
+.so-text-link{display:inline-flex;align-items:center;gap:4px;color:var(--ink);font-weight:650;font-size:12.5px}
+.so-text-link:hover{color:var(--terracotta)}
+.so-text-link.light{color:var(--surface)}
+.so-text-link.light:hover{color:var(--gold)}
+
+/* My Stall page */
+.so-stall-feature{display:grid;grid-template-columns:360px 1fr;gap:34px;align-items:start}
+.so-stall-feature-image{min-height:320px}
+.so-stall-feature-body h1{font-family:var(--font-display);font-weight:400;font-size:36px;letter-spacing:-.6px;margin:2px 0 12px;color:var(--ink)}
+.so-stall-desc{color:var(--body);font-size:14px;line-height:1.75;margin:0 0 18px;max-width:56ch}
+.so-stall-facts{display:flex;gap:34px;margin:0 0 16px}
+.so-stall-facts dt{font-size:9.5px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.so-stall-facts dd{margin:0;font-size:20px;font-weight:650;color:var(--ink)}
+.so-hint{font-size:11.5px;color:var(--muted);margin:16px 0 0;padding-top:14px;border-top:1px solid var(--border)}
+.so-tag{display:inline-block;background:var(--ink);color:var(--surface);border-radius:6px;padding:7px 12px;font-size:10px;font-weight:700;letter-spacing:1px}
+.so-tag.red{background:var(--terracotta)}
+.so-tag.muted{background:var(--soft);color:var(--muted)}
 
 /* Panels */
-.so-panel{background:var(--bg);border:1px solid #457B9D40;border-top:4px solid var(--blue);border-radius:12px;padding:18px;box-shadow:0 4px 15px #E6394608}
-.so-two{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+.so-panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px}
+.so-two{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
 .so-two>*,.so-share>*,.so-stats>*{min-width:0}
-.so-section-title{display:flex;align-items:baseline;gap:12px;background:#5DCAD165;border-radius:8px;padding:12px 15px;margin-bottom:15px}
-.so-section-title h2{margin:0;font-size:15px;color:var(--navy)}
-.so-section-title span{margin-left:auto;font-size:10.5px;font-weight:600;color:var(--blue);white-space:nowrap}
-.so-content>.so-section-title{background:transparent;padding:0;margin-bottom:0}
-.so-content>.so-section-title h2{font-size:24px;letter-spacing:-.6px}
+.so-section-title{display:flex;align-items:baseline;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.so-section-title h2{margin:0;font-size:10.5px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted)}
+.so-section-title span{margin-left:auto;font-size:11px;color:var(--muted);white-space:nowrap}
 
-/* Food ranking */
-.so-rank{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
-.so-rank li{display:flex;align-items:center;gap:13px;padding:11px 12px;border-radius:10px;background:#5DCAD135}
-.so-rank li:first-child{background:#F3CD7455}
-.so-rank-no{display:grid;place-items:center;width:34px;height:34px;border-radius:9px;background:var(--navy);color:var(--bg);font-size:12px;font-weight:700;flex-shrink:0}
-.so-rank li:first-child .so-rank-no{background:var(--gold);color:var(--navy)}
-.so-rank-body{flex:1;min-width:0}
-.so-rank-body p{display:flex;gap:10px;align-items:baseline;margin:0 0 7px}
-.so-rank-body strong{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.so-rank-body span{margin-left:auto;font-size:11px;font-weight:700;color:var(--red);white-space:nowrap}
-.so-rank-money{font-size:11.5px;font-weight:700;color:var(--blue);white-space:nowrap}
-.so-bar{height:9px;border-radius:999px;background:#FFFAE8;overflow:hidden;border:1px solid #457B9D28}
-.so-bar i{display:block;height:100%;background:var(--blue);border-radius:999px}
-.so-bar.red i{background:var(--red)}
+/* Top food ranking — plain typographic rows, no bar charts */
+.so-rank{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.so-rank li{display:flex;align-items:baseline;gap:12px;padding:11px 0;border-bottom:1px solid var(--border)}
+.so-rank li:last-child{border-bottom:0}
+.so-rank-no{font-family:var(--font-display);font-size:14px;color:var(--muted);width:18px;flex-shrink:0}
+.so-rank-name{flex:1;min-width:0;font-size:13px;font-weight:650;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.so-rank-qty{font-size:11.5px;color:var(--muted);white-space:nowrap}
+.so-rank-money{font-size:12.5px;font-weight:700;color:var(--terracotta);white-space:nowrap}
 
-/* Recent orders */
-.so-order-list{display:flex;flex-direction:column;gap:11px}
-.so-order-card{border:1px solid #457B9D33;border-left:5px solid var(--blue);border-radius:10px;padding:13px 15px;background:#5DCAD122}
+/* Recent orders (dashboard) */
+.so-order-list{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+.so-order-card{border:1px solid var(--border);border-radius:10px;padding:13px 15px}
 .so-order-card header{display:flex;align-items:center;gap:10px;margin-bottom:7px}
-.so-order-card header strong{font-size:12.5px;letter-spacing:.4px;color:var(--navy)}
+.so-order-card header strong{font-size:12.5px;letter-spacing:.3px;color:var(--ink)}
 .so-order-card header .badge{margin-left:auto}
-.so-order-card p{margin:0;font-size:12px;color:var(--blue)}
+.so-order-card p{margin:0;font-size:12px;color:var(--muted)}
 .so-order-card footer{display:flex;align-items:baseline;gap:10px;margin-top:9px}
-.so-order-card footer strong{margin-left:auto;font-size:14px;color:var(--red)}
-
-/* My stall */
-.so-stall-card{display:grid;grid-template-columns:340px 1fr;background:var(--bg);border:1px solid #457B9D40;border-radius:14px;overflow:hidden;box-shadow:0 4px 15px #E6394610}
-.so-stall-image,.so-food-image,.so-share-image{display:grid;place-items:center;background:var(--light);color:var(--blue);min-height:240px}
-.so-stall-image img,.so-food-image img,.so-share-image img{width:100%;height:100%;object-fit:cover}
-.so-stall-body{padding:26px 28px;display:flex;flex-direction:column;gap:10px}
-.so-stall-body h2{margin:0;font-size:27px;letter-spacing:-.7px}
-.so-stall-batch{margin:0;font-size:11px;font-weight:700;letter-spacing:1.6px;color:var(--blue);text-transform:uppercase}
-.so-stall-body>p:not(.so-stall-batch){margin:0;color:var(--navy)}
-.so-stall-meta{display:flex;flex-wrap:wrap;gap:9px;margin-top:auto;padding-top:14px}
-.so-tag{background:var(--navy);color:var(--bg);border-radius:6px;padding:7px 12px;font-size:10px;font-weight:700;letter-spacing:1px}
-.so-tag.red{background:var(--red)}
-.so-tag.muted{background:var(--light);color:var(--navy)}
+.so-order-card footer strong{margin-left:auto;font-size:14px;color:var(--terracotta)}
 
 /* Menu */
-.so-food-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px}
-.so-food-card{display:flex;flex-direction:column;background:var(--light);border-radius:13px;overflow:hidden;border-bottom:5px solid var(--blue)}
-.so-food-image{min-height:150px}
-.so-food-body{padding:16px;display:flex;flex-direction:column;gap:7px;flex:1;background:var(--light)}
-.so-food-body h3{margin:0;font-size:16px;letter-spacing:-.3px}
-.so-food-body>p{margin:0;font-size:12px;color:var(--blue)}
-.so-price{display:flex;align-items:baseline;gap:9px;font-size:19px!important;font-weight:700;color:var(--red)!important}
-.so-price small{color:var(--blue);font-size:10.5px;font-weight:600}
-.so-food-facts{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:4px 0 0;padding:11px 0 0;border-top:1px solid #457B9D33}
-.so-food-facts div{display:flex;flex-direction:column;gap:2px}
-.so-food-facts dt{font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--blue)}
-.so-food-facts dd{margin:0;font-size:17px;font-weight:700;color:var(--navy)}
-.so-food-facts .so-strong-red{color:var(--red)}
-.so-dot{display:flex;align-items:center;gap:7px;margin:6px 0 0!important;font-size:11px!important;font-weight:700;color:var(--navy)!important}
-.so-dot::before{content:'';width:9px;height:9px;border-radius:50%;background:var(--blue)}
-.so-dot.off{color:var(--blue)!important}
-.so-dot.off::before{background:var(--red)}
+.so-food-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:18px}
+.so-food-card{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:14px;overflow:hidden;background:var(--surface)}
+.so-food-image{min-height:150px;position:relative}
+.so-food-discount{position:absolute;top:10px;right:10px;background:var(--terracotta);color:var(--surface);border-radius:999px;padding:5px 10px;font-size:9.5px;font-weight:700;letter-spacing:.4px}
+.so-food-body{padding:14px 15px 16px;display:flex;flex-direction:column;gap:6px}
+.so-food-body h3{margin:0;font-size:15px;letter-spacing:-.2px;color:var(--ink)}
+.so-price{display:flex;align-items:baseline;gap:8px;margin:2px 0!important;font-size:17px!important;font-weight:700;color:var(--terracotta)!important}
+.so-price-alt{font-size:10px;font-weight:600;color:var(--muted)}
+.so-food-meta{display:flex;align-items:center;gap:10px;margin-top:2px}
+.so-dot{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:650;color:var(--ink)}
+.so-dot::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--sage)}
+.so-dot.off{color:var(--muted)}
+.so-dot.off::before{background:var(--muted)}
+.so-food-ordered{font-size:10.5px;color:var(--muted);margin-left:auto}
 
-/* Orders + sales */
-.so-reference{font-size:11.5px;letter-spacing:.4px;color:var(--navy)}
-.so-link{border:0;background:transparent;color:var(--blue);text-decoration:underline;text-underline-offset:3px;padding:4px 2px}
-.so-link:hover{background:transparent;color:var(--red)}
-.so-modal-note{margin:0 0 14px;font-size:11.5px;color:var(--blue)}
-.so-modal-total{display:flex;align-items:center;gap:12px;margin:16px 0 0;padding:15px 17px;border-radius:9px;background:var(--navy);color:var(--bg);font-size:12px}
+/* Orders table + Sales table */
+.so-table-panel{padding:12px 18px 18px}
+.so-reference{font-size:11.5px;letter-spacing:.3px;color:var(--ink)}
+.so-link{border:0;background:transparent;color:var(--muted);text-decoration:underline;text-underline-offset:3px;padding:4px 2px}
+.so-link:hover{background:transparent;color:var(--terracotta)}
+.so-modal-note{margin:0 0 14px;font-size:11.5px;color:var(--muted)}
+.so-modal-total{display:flex;align-items:center;gap:12px;margin:16px 0 0;padding:15px 17px;border-radius:10px;background:var(--ink);color:var(--surface);font-size:12px}
 .so-modal-total strong{margin-left:auto;font-size:19px}
-.so-revenue-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:13px}
-.so-revenue-list p{display:flex;gap:10px;align-items:baseline;margin:0 0 6px;font-size:12.5px}
-.so-revenue-list span{margin-left:auto;font-weight:700;color:var(--red);white-space:nowrap}
+.so-money-cell{color:var(--terracotta)}
+
+/* Table look: thin warm rules instead of a filled header bar */
+.so-content table{font-size:12px}
+.so-content th{background:transparent;color:var(--muted);font-size:9.5px;letter-spacing:1px;border-bottom:1px solid var(--border);padding:10px 10px}
+.so-content td{padding:14px 10px;border-bottom:1px solid var(--border)}
+.so-content tbody tr:nth-child(even){background:transparent}
+.so-content tbody tr:hover{background:var(--soft)}
 
 /* Share */
-.so-share{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
-.so-share-card{background:var(--navy);color:var(--bg);border-radius:14px;overflow:hidden;border-bottom:6px solid var(--red)}
-.so-share-image{min-height:210px}
-.so-share-body{padding:22px 24px;display:flex;flex-direction:column;gap:6px}
-.so-share-body h2{margin:0;font-size:25px;letter-spacing:-.6px;color:var(--bg)}
-.so-share-body p{margin:0;font-size:12px;color:var(--light)}
-.so-share-foods{padding-top:9px;margin-top:5px!important;border-top:1px solid #5DCAD140;font-size:11.5px!important}
-.so-link-box{margin:0 0 14px;padding:14px 15px;border-radius:9px;background:#5DCAD155;border:1px dashed var(--blue);font-family:ui-monospace,Consolas,monospace;font-size:12px;word-break:break-all;color:var(--navy)}
-.so-share-actions{display:flex;gap:10px;flex-wrap:wrap}
-.so-button{background:var(--red);color:var(--bg);border:1px solid var(--red);border-radius:8px;padding:11px 20px;font-size:12px;font-weight:700}
-.so-button:hover{background:var(--navy);border-color:var(--navy)}
-.so-button.ghost{background:var(--bg);color:var(--navy);border-color:var(--blue)}
-.so-button.ghost:hover{background:var(--light)}
-.so-copied{margin:12px 0 0;font-size:11.5px;font-weight:700;color:var(--red)}
+.so-share{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+.so-share-card{background:var(--ink);color:var(--surface);border-radius:16px;overflow:hidden;position:relative}
+.so-share-card::after{content:'';position:absolute;right:-70px;bottom:-70px;width:190px;height:190px;border:1px solid #8FAF9A55;border-radius:50%;pointer-events:none}
+.so-share-image{min-height:190px;border-radius:0}
+.so-share-body{position:relative;z-index:1;padding:22px 24px;display:flex;flex-direction:column;gap:6px}
+.so-share-body h2{margin:0;font-family:var(--font-display);font-weight:400;font-size:26px;letter-spacing:-.4px;color:var(--surface)}
+.so-share-body p{margin:0;font-size:12.5px;color:#D8CFAE}
+.so-share-body .so-text-link{margin-top:8px}
+.so-link-box{margin:0 0 16px;padding:14px 15px;border-radius:10px;background:var(--soft);border:1px dashed var(--border);font-family:ui-monospace,Consolas,monospace;font-size:12px;word-break:break-all;color:var(--ink)}
+.so-share-actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.so-copied{margin:0 0 14px;font-size:11.5px;font-weight:700;color:var(--terracotta)}
+.so-panel>.so-text-link{display:block;margin-bottom:14px}
 
-/* Empty state — a ticket-stub dashed edge */
-.so-empty{text-align:center;padding:38px 20px;border:2px dashed #F3CD74A0;border-radius:11px;background:#5DCAD122}
-.so-empty>span{display:inline-grid;place-items:center;width:52px;height:52px;border-radius:14px;background:var(--gold);color:var(--navy);font-size:26px}
-.so-empty h3{margin:12px 0 6px;font-size:14px;color:var(--navy)}
-.so-empty p{margin:0;font-size:12px;color:var(--blue)}
+/* Three-tier button system: primary (terracotta), secondary (surface/ink border), text links (elsewhere) */
+.so-button{border-radius:9px;padding:12px 22px;font-size:12.5px;font-weight:700;border:1.5px solid transparent}
+.so-button.primary{background:var(--terracotta);color:var(--surface);border-color:var(--terracotta)}
+.so-button.primary:hover{background:var(--terracotta-dark);border-color:var(--terracotta-dark)}
+.so-button.secondary{background:transparent;color:var(--surface);border-color:#EEE5D880}
+.so-button.secondary:hover{background:#FFFDF81A}
+.so-panel .so-button.secondary{color:var(--ink);border-color:var(--ink)}
+.so-panel .so-button.secondary:hover{background:var(--soft)}
 
-/* Laptop and tablet */
-@media(max-width:1250px){.so-two,.so-share{grid-template-columns:1fr}.so-stall-card{grid-template-columns:260px 1fr}}
-@media(max-width:820px){.so-stats{grid-template-columns:1fr}}
-@media(max-width:900px){
- .so-sidebar{position:fixed;inset:0 auto 0 0;transform:translateX(-100%);transition:transform .2s;box-shadow:0 0 40px #E6394640}
- .so-sidebar.open{transform:none}
- .so-menu{display:inline-flex;font-size:17px;padding:7px 12px}
- .so-content{padding:20px}
- .so-header{padding:12px 18px}
- .so-hero{flex-wrap:wrap;padding:22px}
- .so-hero h1{font-size:24px}
- .so-hero-tag{margin-left:0}
- .so-stall-card{grid-template-columns:1fr}
- .so-stall-image{min-height:200px}
- .so-revenue strong{font-size:36px}
- .so-account>div{display:none}
+/* Empty state */
+.so-empty{text-align:center;padding:34px 20px;border:1px dashed var(--border);border-radius:14px}
+.so-empty>span{display:inline-grid;place-items:center;width:44px;height:44px;border-radius:12px;background:var(--gold);color:var(--ink);font-size:22px}
+.so-empty h3{margin:12px 0 6px;font-size:13px;color:var(--ink)}
+.so-empty p{margin:0;font-size:12px;color:var(--muted)}
+
+/* Responsive */
+@media(max-width:1024px){
+ .so-feature,.so-stall-feature{grid-template-columns:240px 1fr;gap:22px}
+ .so-stall-feature-image{min-height:260px}
 }
-@media(max-width:560px){.so-content{padding:16px}.so-food-grid{grid-template-columns:1fr}.so-section-title{flex-wrap:wrap}.so-section-title span{margin-left:0}.so-rank li{flex-wrap:wrap}.so-rank-money{margin-left:47px}.so-revenue strong{font-size:30px}}
+@media(max-width:900px){
+ .so-menu-toggle{display:inline-flex}
+ .so-nav{display:none;flex-direction:column;gap:2px;position:absolute;left:0;right:0;top:100%;background:var(--cream);border-bottom:1px solid var(--border);padding:8px 20px 16px;box-shadow:0 14px 30px #2F332814}
+ .so-nav.open{display:flex}
+ .so-nav a{padding:11px 4px;border-bottom:1px solid var(--border)}
+ .so-nav a::after{display:none}
+ .so-nav a.active{color:var(--terracotta)}
+ .so-topbar-stall{display:none}
+ .so-owner-name{display:none}
+ .so-hero h1{font-size:32px}
+ .so-content>.so-section-title h2{font-size:26px}
+ .so-feature,.so-stall-feature{grid-template-columns:1fr}
+ .so-feature-image{min-height:180px}
+ .so-stall-feature-image{min-height:220px}
+ .so-two,.so-share{grid-template-columns:1fr}
+ .so-stall-facts{gap:26px}
+}
+@media(max-width:700px){
+ .so-content table,.so-content thead,.so-content tbody,.so-content th,.so-content td,.so-content tr{display:block}
+ .so-content thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+ .so-content tr{margin-bottom:14px;border:1px solid var(--border);border-radius:12px;padding:6px 14px}
+ .so-content tr:last-child{margin-bottom:0}
+ .so-content td{border-bottom:1px solid var(--border);padding:10px 0;display:flex;justify-content:space-between;align-items:center;gap:12px;text-align:right}
+ .so-content tr td:last-child{border-bottom:0}
+ .so-content td[data-label='']{justify-content:flex-end}
+ .so-content td::before{content:attr(data-label);font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);text-align:left}
+ .so-content td[data-label='']::before{content:none}
+}
+@media(max-width:560px){
+ .so-content{padding:20px 16px}
+ .so-topbar-row{padding:12px 16px}
+ .so-nav{padding:8px 16px 14px}
+ .so-hero{flex-direction:column;align-items:flex-start}
+ .so-hero .banner-mascot{align-self:center}
+ .so-food-grid{grid-template-columns:1fr}
+ .so-stats{flex-direction:column}
+ .so-stat+.so-stat{border-left:0;border-top:1px solid var(--border)}
+ .so-stall-facts{flex-wrap:wrap;gap:18px 26px}
+ .so-share-actions{flex-direction:column}
+ .so-share-actions .so-button{width:100%}
+}
 
-/* ============ Colour and depth pass ============ */
-
-/* Sidebar: a stronger brand block and colour-coded sections */
-.so-brand{background:#457B9D40;border-radius:12px;border-bottom:0;padding:12px;margin-bottom:4px}
-.so-nav-section{color:var(--light);border-bottom-color:#5DCAD140}
-.so-sidebar a{transition:background .16s,transform .16s}
-.so-sidebar a:hover{transform:translateX(2px)}
-
-/* Header: a red hairline so the top of the page is never plain */
-.so-header{box-shadow:inset 0 4px var(--red)}
-.so-avatar{box-shadow:0 0 0 3px #5DCAD180}
-
-/* Hero: room for the forest spirit plus a decorative ring */
-.so-hero{position:relative;overflow:hidden;padding:24px 0 24px 28px;gap:14px}
-.so-hero::after{content:'';position:absolute;left:-80px;bottom:-110px;width:250px;height:250px;border:30px solid #457B9D3D;border-radius:50%;pointer-events:none}
-.so-hero-text{position:relative;z-index:1;flex:1;min-width:0}
-.so-hero .banner-mascot{position:relative;z-index:1;margin-right:14px}
-.so-hero-tag{margin:16px 0 0;margin-left:0;display:inline-block}
-
-/* Statistic cards: rings, lift on hover */
-.so-stat{position:relative;overflow:hidden;border-radius:16px;transition:transform .18s,box-shadow .18s}
-.so-stat::after{content:'';position:absolute;right:-46px;top:-46px;width:135px;height:135px;border:20px solid #FFFAE824;border-radius:50%;pointer-events:none}
-.so-stat.light::after{border-color:#E6394614}
-.so-stat>*{position:relative;z-index:1}
-.so-stat:hover{transform:translateY(-3px);box-shadow:0 12px 26px #E639461F}
-
-/* Revenue banner: two rings, nothing flat */
-.so-revenue{position:relative;overflow:hidden;border-radius:16px}
-.so-revenue::before,.so-revenue::after{content:'';position:absolute;border-radius:50%;border:24px solid #FFFAE81F;pointer-events:none}
-.so-revenue::before{left:-70px;top:-80px;width:200px;height:200px}
-.so-revenue::after{right:-80px;bottom:-90px;width:220px;height:220px}
-.so-revenue p,.so-revenue strong,.so-revenue small{position:relative;z-index:1}
-
-/* Panels: alternating accent colours instead of one blue everywhere */
-.so-panel{border-radius:16px;transition:box-shadow .18s}
-.so-panel:hover{box-shadow:0 10px 26px #E6394614}
-.so-two>section:nth-child(2){border-top-color:var(--red)}
-.so-two>section:nth-child(2) .so-section-title{border-left-color:var(--red)}
-.so-section-title{border-left:5px solid var(--blue);background:var(--light)}
-
-/* Ranking: gold-silver-bronze in palette colours */
-.so-rank li:nth-child(2){background:#5DCAD155}
-.so-rank li:nth-child(2) .so-rank-no{background:var(--blue)}
-.so-rank li:nth-child(3) .so-rank-no{background:var(--light);color:var(--navy);border:2px solid var(--navy)}
-.so-rank li{transition:transform .16s}
-.so-rank li:hover{transform:translateX(3px)}
-
-/* Recent orders: alternating card accents */
-.so-order-list>article:nth-child(2n){border-left-color:var(--red);background:#EB5B320E}
-.so-order-list>article:nth-child(3n){border-left-color:var(--navy)}
-
-/* Menu: price as a red chip, alternating card accents, lift on hover */
-.so-food-card{border-radius:16px;transition:transform .18s,box-shadow .18s}
-.so-food-card:hover{transform:translateY(-4px);box-shadow:0 14px 28px #E639461F}
-.so-food-grid>article:nth-child(3n+2){border-bottom-color:var(--red)}
-.so-food-grid>article:nth-child(3n+3){border-bottom-color:var(--navy)}
-.so-price{align-self:flex-start;background:var(--red);color:var(--bg)!important;padding:7px 14px;border-radius:999px;font-size:16px!important;margin:2px 0 4px}
-.so-price small{color:#FFFAE8C4}
-.so-food-facts dd{font-size:18px}
-
-/* Stall and share cards */
-.so-stall-card,.so-share-card{border-radius:16px;transition:box-shadow .18s}
-.so-stall-card:hover,.so-share-card:hover{box-shadow:0 14px 30px #E639461F}
-.so-share-card{position:relative;overflow:hidden}
-.so-share-card::after{content:'';position:absolute;right:-70px;bottom:-70px;width:190px;height:190px;border:24px solid #457B9D40;border-radius:50%;pointer-events:none}
-.so-share-body{position:relative;z-index:1}
-
-/* Empty state a little friendlier */
-.so-empty{border-radius:16px;background:#5DCAD12E}
-
-@media(max-width:900px){.so-hero{padding:22px 0 22px 22px}.so-hero .banner-mascot{flex-basis:150px;width:150px}}
-@media(max-width:560px){.so-hero{padding:20px}.so-hero .banner-mascot{display:none}}
-
-/* The spirit sits on the navy hero, so its outlines switch to cream */
-.so-hero .spirit-fur,.so-hero .spirit-belly,.so-hero .spirit-arm,.so-hero .spirit-foot,.so-hero .eye-white{stroke:var(--bg)}
-.so-hero .spirit-whisker{stroke:var(--light);opacity:1}
-.so-hero .play-ground{stroke:#5DCAD155}
-.so-hero .spirit-shadow{fill:#0B1B2E;opacity:.35}
-.so-hero .drop{stroke:var(--light)}
-.so-hero .play-spark{fill:var(--light)}
-.so-hero .motion-toggle{background:transparent;border-color:#5DCAD155;color:var(--light)}
-.so-hero .motion-toggle:hover{background:#5DCAD126}
+/* The mascot sits on the plain cream hero and uses its normal light-background colours (mascot.css defaults, now warm via the --navy/--blue/--light/--red aliases in base.css). */

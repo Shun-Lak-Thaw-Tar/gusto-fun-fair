@@ -1,0 +1,112 @@
+/* Public Stall invitation — isolated from the authenticated Stall Owner screens (so-* classes). Warm editorial palette, consistent with the rest of the portal. */
+
+.gi-page{
+ min-height:100vh;
+ display:flex;
+ flex-direction:column;
+ align-items:center;
+ justify-content:center;
+ gap:28px;
+ padding:32px 20px 56px;
+ background:radial-gradient(circle at 15% 12%,#8FAF9A26,transparent 46%),radial-gradient(circle at 88% 82%,#E7C36A2E,transparent 50%),var(--cream);
+ color:var(--ink);
+ opacity:0;
+ animation:gi-page-fade .55s ease both;
+}
+
+.gi-topmark{display:flex;align-items:center;gap:10px}
+.gi-topmark img{width:36px;height:36px;border-radius:7px;object-fit:contain}
+.gi-topmark span{font-size:11px;font-weight:800;letter-spacing:2.2px;color:var(--muted)}
+
+/* Loading / not-found / error states */
+.gi-state{max-width:420px;text-align:center;background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:44px 30px;box-shadow:0 14px 40px #2F332814}
+.gi-state-icon{display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:50%;background:var(--soft);color:var(--ink);font-size:22px;margin-bottom:16px}
+.gi-state h1{font-size:20px;letter-spacing:-.4px;margin-bottom:10px}
+.gi-state p{font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:20px}
+.gi-state.error .gi-state-icon{background:#B85C521A;color:var(--danger)}
+.gi-spinner{display:inline-block;width:26px;height:26px;border:3px solid var(--soft);border-top-color:var(--ink);border-radius:50%;animation:gi-spin .8s linear infinite}
+
+/* Scene: envelope + sparkles + card share the same stage, stacked by z-index, not DOM nesting,
+   so hiding the decorative envelope (reduced motion) never hides the card content. */
+.gi-scene{position:relative;width:min(440px,92vw);display:grid;place-items:center}
+
+.gi-envelope{position:absolute;inset:auto 0 8% 0;margin:0 auto;width:78%;max-width:300px;height:150px;pointer-events:none;z-index:1;opacity:0;scale:.88;animation:gi-envelope-in .5s ease both,gi-envelope-fade .5s ease both;animation-delay:.1s,1.9s}
+.gi-envelope-body{position:absolute;inset:0;background:var(--ink);border-radius:12px;box-shadow:0 18px 40px #2F332840}
+.gi-flap{position:absolute;top:0;left:0;right:0;height:100%;background:#3C4234;clip-path:polygon(0 0,100% 0,50% 62%);transform-origin:50% 0;rotate:0deg;animation:gi-flap-open .55s ease both;animation-delay:.6s}
+
+.gi-sparkles{position:absolute;inset:-6% -8%;pointer-events:none;z-index:3}
+.gi-sparkle{position:absolute;font-size:20px;color:var(--gold);opacity:0;scale:.4;animation:gi-sparkle-in .45s ease both,gi-sparkle-twinkle 2.8s ease-in-out infinite;text-shadow:0 2px 8px #E7C36A55}
+.gi-sparkle.s1{top:2%;left:4%;animation-delay:1.6s,2.05s}
+.gi-sparkle.s2{top:8%;right:0;font-size:15px;animation-delay:1.75s,2.2s}
+.gi-sparkle.s3{bottom:14%;left:-2%;font-size:16px;animation-delay:1.9s,2.35s}
+.gi-sparkle.s4{bottom:2%;right:6%;animation-delay:2.05s,2.5s}
+.gi-sparkle.s5{top:42%;right:-4%;font-size:14px;animation-delay:2.2s,2.65s}
+
+.gi-card{
+ position:relative;z-index:2;width:100%;
+ display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;
+ background:var(--ink);color:var(--surface);border-radius:20px;padding:32px 26px 30px;
+ border-bottom:7px solid var(--terracotta);box-shadow:0 22px 60px #2F332833;overflow:hidden;
+ opacity:0;translate:0 46px;scale:.94;
+ animation:gi-card-rise .85s cubic-bezier(.2,.8,.2,1) both,gi-card-idle 6.4s ease-in-out infinite;
+ animation-delay:1s,2.4s;
+}
+.gi-card::after{content:'';position:absolute;right:-70px;bottom:-70px;width:190px;height:190px;border:26px solid #8FAF9A2E;border-radius:50%;pointer-events:none}
+.gi-card>*{position:relative;z-index:1}
+
+.gi-eyebrow{font-size:9.5px;font-weight:800;letter-spacing:2px;color:#D8CFAE;margin:0}
+.gi-headline{font-family:var(--font-display);font-weight:400;font-size:30px;letter-spacing:-.5px;margin:0;color:var(--surface)}
+.gi-card-image{width:100%;aspect-ratio:16/10;border-radius:14px;overflow:hidden;background:var(--soft);display:grid;place-items:center;color:var(--muted);margin-top:4px}
+.gi-card-image img{width:100%;height:100%;object-fit:cover}
+.gi-stall-name{font-family:var(--font-display);font-weight:400;font-size:26px;letter-spacing:-.3px;margin:6px 0 0;color:var(--surface);word-break:break-word;overflow-wrap:anywhere}
+.gi-description{font-size:12.5px;line-height:1.7;color:#D8CFAE;margin:0;max-width:38ch;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.gi-facts{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:2px}
+.gi-fact{font-size:10.5px;font-weight:700;letter-spacing:.3px;color:var(--ink);background:var(--gold);padding:6px 11px;border-radius:999px}
+.gi-teaser{font-size:11.5px;color:#D8CFAE;margin:0;max-width:36ch}
+.gi-button{margin-top:10px;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;cursor:pointer;border-radius:10px;padding:13px 26px;font-size:13px;font-weight:750;letter-spacing:.2px;border:1px solid transparent}
+.gi-button.primary{background:var(--gold);color:var(--ink);box-shadow:0 10px 24px #E7C36A55}
+.gi-button.primary:hover{background:var(--surface)}
+.gi-button.ghost{background:transparent;color:var(--ink);border-color:var(--border)}
+.gi-button.ghost:hover{background:var(--soft)}
+.gi-state .gi-button.ghost{color:var(--muted)}
+
+/* Desktop-only hover tilt — a separate CSS property from the rise/idle `translate`+`scale`, so they compose without conflict. */
+@media (hover:hover) and (pointer:fine){
+ .gi-card{transition:rotate .2s ease}
+ .gi-card:hover{rotate:3deg}
+}
+
+/* Responsive */
+@media(max-width:768px){
+ .gi-page{padding:24px 16px 40px;gap:20px}
+ .gi-card{padding:26px 20px 24px;border-radius:16px}
+ .gi-headline{font-size:22px}
+ .gi-stall-name{font-size:20px}
+ .gi-card-image{aspect-ratio:16/9}
+}
+@media(max-width:420px){
+ .gi-scene{width:100%}
+ .gi-envelope{max-width:230px;height:120px}
+ .gi-card{padding:22px 16px 20px}
+ .gi-button{width:100%}
+ .gi-sparkle{font-size:15px}
+}
+
+/* Animation keyframes */
+@keyframes gi-spin{to{rotate:360deg}}
+@keyframes gi-page-fade{to{opacity:1}}
+@keyframes gi-envelope-in{to{opacity:1;scale:1}}
+@keyframes gi-envelope-fade{to{opacity:0}}
+@keyframes gi-flap-open{to{rotate:-126deg;opacity:0}}
+@keyframes gi-card-rise{to{opacity:1;translate:0 0;scale:1}}
+@keyframes gi-card-idle{0%,100%{translate:0 0}50%{translate:0 -5px}}
+@keyframes gi-sparkle-in{to{opacity:.9;scale:1}}
+@keyframes gi-sparkle-twinkle{0%,100%{opacity:.55}50%{opacity:1}}
+
+@media(prefers-reduced-motion:reduce){
+ .gi-page *{animation:none!important;transition:none!important}
+ .gi-page{opacity:1}
+ .gi-envelope{display:none!important}
+ .gi-card{opacity:1!important;translate:0!important;scale:1!important}
+ .gi-sparkle{opacity:.85!important;scale:1!important}
+}

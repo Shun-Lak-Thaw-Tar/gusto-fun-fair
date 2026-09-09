@@ -11,6 +11,9 @@ export async function api(path, { method = 'GET', body, signal, blob = false } =
   return response.status === 204 ? {} : blob ? response.blob() : response.json();
 }
 export const mediaUrl = path => path?.startsWith('/api/') ? `${base}${path.slice(4)}` : (/^https?:\/\//i.test(path || '') ? path : undefined);
+// The customer frontend is a separate, already-hosted repo/deployment; never derive its origin from window.location.
+export const PUBLIC_SITE_URL = (import.meta.env?.VITE_PUBLIC_SITE_URL || 'https://funfair.gustocollegeprojects.com').replace(/\/$/, '');
+export const publicStallUrl = slug => `${PUBLIC_SITE_URL}/stalls/${slug}`;
 export const id = row => row?._id || row?.id;
 export const statuses = ['AWAITING_PAYMENT','PAYMENT_DECLARED','PAYMENT_SUBMITTED','PAYMENT_REUPLOAD_REQUESTED','PAYMENT_APPROVED','PAYMENT_REJECTED','PAYMENT_EVIDENCE_EXPIRED','CANCELLED','EXPIRED'];
 export const money = value => value == null ? '—' : `${Number(value).toLocaleString()} MMK`;

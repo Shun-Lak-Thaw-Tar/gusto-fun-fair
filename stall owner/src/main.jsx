@@ -1,27 +1,27 @@
 import React,{useEffect,useState} from 'react';
 import {createRoot} from 'react-dom/client';
-import {BrowserRouter,Routes,Route,Navigate} from 'react-router-dom';
+import {BrowserRouter,Routes,Route,Navigate,useLocation} from 'react-router-dom';
 import {api,session} from './api';
 import {Form} from './ui';
 import {LoginSpirit} from './mascot';
 import './base.css';
 import {StallOwnerLayout,OwnerDashboard,OwnerStall,OwnerMenu,OwnerOrders,OwnerSales,OwnerShare} from './stall-owner';
+import PublicInvitation from './invite';
 
 function Login({user,onLogin}){
  if(user)return <Navigate to="/stall-owner/dashboard" replace/>;
  return <div className="so-login">
   <div className="so-login-brand">
    <img className="gusto-logo" src="/gusto-logo.png" alt="Gusto College logo"/>
-   <p className="eyebrow">GUSTO FUN FAIR / STALL OWNER</p>
-   <h1>Your stall.<br/>Your numbers.</h1>
+   <p className="eyebrow">GUSTO FUN FAIR · 2026</p>
+   <h1>Good food<br/>brings people<br/>together.</h1>
    <p>See how many people ordered your food, which dishes sell the most, and the approved sales your stall has made.</p>
-   <div className="so-login-marks"><span/><span/><span/></div>
+   <span className="so-login-date">11 · 09 · 26</span>
    <LoginSpirit/>
-   <small>GUSTO FUN FAIR / 2026</small>
   </div>
   <div className="so-login-form">
-   <p className="eyebrow">WELCOME BACK</p>
-   <h2>Sign in to your stall</h2>
+   <p className="eyebrow">STALL OWNER</p>
+   <h2>Welcome back.</h2>
    <p>Use the stall owner account the event administrator gave you.</p>
    <Form fields={[{key:'name',label:'Account name',required:true,minLength:2,maxLength:50},{key:'password',label:'Password',type:'password',required:true,minLength:8,maxLength:128}]} onSave={async credentials=>{
     const data=await api('/auth/login',{method:'POST',body:credentials});
@@ -34,15 +34,20 @@ function Login({user,onLogin}){
 }
 
 function App(){
- const [user,setUser]=useState(null),[checking,check]=useState(true),[authError,setAuthError]=useState(''),[retry,setRetry]=useState(0);
- useEffect(()=>{let active=true;check(true);setAuthError('');if(!session.get()){check(false);return;}
+ // Public invitations never touch stall-owner session state — no /auth/me call, no verifying-session gate.
+ const isInvite=useLocation().pathname.startsWith('/invite/');
+ const [user,setUser]=useState(null),[checking,check]=useState(!isInvite),[authError,setAuthError]=useState(''),[retry,setRetry]=useState(0);
+ useEffect(()=>{
+  if(isInvite)return;
+  let active=true;check(true);setAuthError('');if(!session.get()){check(false);return;}
   api('/auth/me').then(d=>{if(active){if(d.user.role==='stall_owner')setUser(d.user);else session.clear();}}).catch(e=>{if(active&&e.status!==401)setAuthError(e.message);}).finally(()=>active&&check(false));
-  return()=>{active=false;};},[retry]);
+  return()=>{active=false;};},[retry,isInvite]);
  useEffect(()=>{const clear=()=>setUser(null);window.addEventListener('monitor:unauthorized',clear);return()=>window.removeEventListener('monitor:unauthorized',clear);},[]);
- if(checking)return <div className="state" role="status"><span className="spinner"/>Verifying your stall owner session…</div>;
- if(authError)return <div className="state error" role="alert"><h3>Unable to verify your session</h3><p>{authError}</p><button onClick={()=>setRetry(x=>x+1)}>Retry</button><button onClick={()=>{session.clear();setAuthError('');setUser(null);}}>Return to sign in</button></div>;
+ if(!isInvite&&checking)return <div className="state" role="status"><span className="spinner"/>Verifying your stall owner session…</div>;
+ if(!isInvite&&authError)return <div className="state error" role="alert"><h3>Unable to verify your session</h3><p>{authError}</p><button onClick={()=>setRetry(x=>x+1)}>Retry</button><button onClick={()=>{session.clear();setAuthError('');setUser(null);}}>Return to sign in</button></div>;
  const logout=()=>{session.clear();setUser(null);};
  return <Routes>
+  <Route path="/invite/:slug" element={<PublicInvitation/>}/>
   <Route path="/login" element={<Login user={user} onLogin={setUser}/>}/>
   <Route path="/stall-owner" element={user?<StallOwnerLayout user={user} logout={logout}/>:<Navigate to="/login" replace/>}>
    <Route index element={<Navigate to="dashboard" replace/>}/>
