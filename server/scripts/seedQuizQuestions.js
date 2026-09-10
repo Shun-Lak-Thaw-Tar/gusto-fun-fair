@@ -67,8 +67,18 @@ try {
     },
   }));
   const result = await QuizQuestion.bulkWrite(operations);
+
+  // questions.txt is the single source of truth: anything in the collection
+  // that isn't parsed from it right now (old demo/seed content, previously
+  // deleted questions re-added by hand, etc.) gets removed rather than just
+  // deactivated, so the quiz can never sample from it.
+  const keepQuestions = parsed.map(({ question }) => question);
+  const pruned = await QuizQuestion.deleteMany({
+    question: { $nin: keepQuestions },
+  });
+
   console.log(
-    `Quiz questions seeded: ${parsed.length} parsed, ${result.upsertedCount} inserted, ${result.modifiedCount} updated.`,
+    `Quiz questions synced: ${parsed.length} parsed, ${result.upsertedCount} inserted, ${result.modifiedCount} updated, ${pruned.deletedCount} removed (not in questions.txt).`,
   );
 } catch (error) {
   console.error(error.message);
