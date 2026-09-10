@@ -96,6 +96,22 @@ export const startQuiz = async ({ userId, code }) => {
   });
 };
 
+// -1 marks a question the client never got an answer recorded for (e.g. the
+// 50s timer expired before it was reached) — it can never match a
+// correctOption (0-3), so it is always scored as wrong.
+const buildResults = (attempt) =>
+  attempt.questions.map((question, index) => {
+    const yourAnswer = attempt.answers[index];
+    return {
+      questionId: question.questionId,
+      question: question.question,
+      options: question.options,
+      correctOption: question.correctOption,
+      yourAnswer,
+      correct: question.correctOption === yourAnswer,
+    };
+  });
+
 export const submitQuiz = async ({ userId, attemptId, answers }) => {
   if (!mongoose.isObjectIdOrHexString(attemptId))
     throw new ApiError(400, "Invalid quiz attempt ID");
@@ -103,12 +119,12 @@ export const submitQuiz = async ({ userId, attemptId, answers }) => {
     !Array.isArray(answers) ||
     answers.length !== 5 ||
     answers.some(
-      (answer) => !Number.isInteger(answer) || answer < 0 || answer > 3,
+      (answer) => !Number.isInteger(answer) || answer < -1 || answer > 3,
     )
   )
     throw new ApiError(
       400,
-      "Exactly five option indexes between 0 and 3 are required",
+      "Exactly five option indexes between -1 (unanswered) and 3 are required",
     );
   const result = await mongoose.connection.transaction(async (session) => {
     const attempt = await QuizAttempt.findOne({
@@ -143,12 +159,13 @@ export const submitQuiz = async ({ userId, attemptId, answers }) => {
       timedOut,
       elapsedMs,
       reward: attempt.reward,
+      results: buildResults(attempt),
     };
   });
   return result;
 };
 
-export const getQuizLeaderboard = async (limit = 5) => {
+export const getQuizLeaderboard = async (limit = 10) => {
   const attempts = await QuizAttempt.find({ passed: true })
     .sort({ elapsedMs: 1, submittedAt: 1 })
     .limit(limit)
@@ -165,7 +182,7 @@ export const getQuizLeaderboard = async (limit = 5) => {
 };
 
 export const getQuizResult = async ({ userId, attemptId }) => {
-  const attempt = await QuizAttempt.findOne({ _id: attemptId, userId }).lean();
+  const attempt = await QuizAttempt.findOne({ _id: attemptId, userId });
   if (!attempt) throw new ApiError(404, "Quiz attempt not found");
   return {
     attemptId: attempt._id,
@@ -175,5 +192,6 @@ export const getQuizResult = async ({ userId, attemptId }) => {
     elapsedMs: attempt.elapsedMs ?? null,
     submittedAt: attempt.submittedAt || null,
     reward: attempt.reward || null,
+    results: attempt.submittedAt ? buildResults(attempt) : null,
   };
 };

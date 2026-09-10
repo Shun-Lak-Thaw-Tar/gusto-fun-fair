@@ -12,6 +12,7 @@
     "start": "node src/server.js",
     "seed:demo": "node seed/seedDemo.js",
     "migrate:foods": "node scripts/migrateFoodItems.js",
+    "seed:quiz": "node scripts/seedQuizQuestions.js",
     "test": "node scripts/run-tests.js",
     "test:unit": "node --test test/pricingService.test.js test/ticketCode.test.js test/v11Validation.test.js test/v12Structure.test.js test/mediaValidation.test.js",
     "r2:setup": "node scripts/setup-r2.js",

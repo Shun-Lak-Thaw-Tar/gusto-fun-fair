@@ -12,7 +12,7 @@ const codeSchema = z
   .object({ code: z.string().trim().min(1).max(100) })
   .strict();
 const answersSchema = z.object({
-  answers: z.array(z.number().int().min(0).max(3)).length(5),
+  answers: z.array(z.number().int().min(-1).max(3)).length(5),
 });
 
 export const validateCode = async (req, res) => {
