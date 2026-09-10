@@ -118,3 +118,95 @@ Ans: B
 (C) Junction Square, Library 
 (D) Junction Square, Consultation Room
 Ans: A
+
+
+18. GUSTO College Building 216 တွင် ရှိသောအခန်းအရေအတွက် ကိုဖြေပေးပါ။
+(A) 30
+(B) 18
+(C) 20
+(D) 10
+Ans: A
+
+19. GUSTO College Library တွင်စာအုပ်ငှားလိုပါက  ယူဆောင်လာရမည် ကိုပြောပြပါ။
+(A) Student Card
+(B) Library Card
+(C) National Smart Card
+(D) Gmail Account
+Ans: A
+
+20. GUSTO College နှင့်ချိတ်ဆက်ထားသော Singapore University ကိုဖော်ပြပါ။
+(A) National University of Singapore
+(B) James Cook University
+(C) Nanyang Technological  University
+(D) Singapore Mangement University
+Ans: B
+
+21. GUSTO College Building 3 (Junction Square) တွင်ရှိသော အခန်းအရေအတွက် ကိုဖြေပေးပါ။
+(A) 9
+(B) 18
+(C) 13
+(D) 12
+Ans: D
+
+22. GUSTO College Campus Time City Building COVID-19 ပြီး‌သောအခါ ပထမဆုံးဖွင့်သော အချိန်ခုနှစ်ကို ဖြေပေးပါ။
+(A) 2022
+(B) 2021
+(C) 2023
+(D) 2024
+Ans: B
+
+23. GUSTO College တွင် Business ဆရာ/ဆရာမ ဘယ်နှစ်ယောက်ရှိလဲ‌ ဖော်ပြပါ။
+(A) 7
+(B) 5
+(C) 4
+(D) 6
+Ans: B
+
+24. GUSTO College တွင် IT ဆရာ/ဆရာမ ဘယ်နှစ်ယောက်ရှိလဲ ဖော်ပြပါ။
+(A) 13
+(B) 15
+(C) 11
+(D) 17
+Ans: C
+
+25. GUSTO Innovation 2025 ပွဲတွင် Champion ဆုရရှိခဲ့သော အသင်းကိုရွေးပါ။
+(A) Burma Bus
+(B) Kalo
+(C) Toly Moly
+(D) GustoZone
+Ans: A
+
+26. အောက်ပါ Program များအနက် GUSTO College တွင် လက်ရှိမရှိသော Program ကိုရွေးပါ။
+(A) M.Sc Cybersecurity
+(B) B.Sc (Hons) System Design Engineering
+(C) B.Sc (Hons) Computer Systems Engineering
+(D) Pre-GED
+Ans: B
+
+27. GUSTO College Campus ရှိ Building များအားလုံး၏ Floor Level များကို ပေါင်းလျှင် စုစုပေါင်း ဘယ်နှစ်လွှာရှိသနည်း။
+(A) 15
+(B) 16
+(C) 17
+(D) 18
+Ans: C
+
+28. အောက်ပါ Club များအနက် GUSTO College တွင် လက်ရှိမရှိသော Club ကိုရွေးပါ။
+(A) Literature Club
+(B) Coding Club
+(C) Chess Club
+(D) Table Tennis Club
+Ans: D
+
+29. GUSTO College ၏ Building 216 နှင့် Building 209 နှစ်ခုလုံးရှိ Toilet အရေအတွက် စုစုပေါင်း ဘယ်နှစ်ခုရှိသနည်း။
+(A) 12
+(B) 13
+(C) 14
+(D) 15
+Ans: C
+
+30. အောက်ပါ Activity များအနက် GUSTO Music Club မပါဝင်ခဲ့သော Activity ကိုရွေးပါ။
+(A) GUSTO Innovation 2025
+(B) GUSTO Fun Fair 2024
+(C) GUSTO Thingyan 2023
+(D) GUSTO Graduation 2025
+Ans: D
