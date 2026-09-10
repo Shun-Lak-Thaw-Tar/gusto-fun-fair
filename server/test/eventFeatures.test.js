@@ -413,6 +413,22 @@ test(
         );
         assert.equal(result.score, 5);
         assert.equal(result.passed, true);
+        assert.equal(result.results.length, 5);
+        assert.equal(
+          result.results.every((entry) => entry.correct === true),
+          true,
+        );
+        assert.deepEqual(
+          result.results.map((entry) => entry.yourAnswer),
+          correctAnswers,
+        );
+        const fetchedResult = expectStatus(
+          await request(`/quiz/result/${started.attemptId}`, {
+            account: user,
+          }),
+          200,
+        );
+        assert.equal(fetchedResult.results.length, 5);
         expectStatus(
           await request(`/quiz/${started.attemptId}/submit`, {
             account: user,
@@ -437,15 +453,27 @@ test(
           }),
           201,
         );
+        expectStatus(
+          await request(`/quiz/${second.attemptId}/submit`, {
+            account: user,
+            method: "POST",
+            json: { answers: [4, 0, 0, 0, 0] },
+          }),
+          400,
+        );
+        // -1 marks a question the timer ran out on before an answer was
+        // recorded; it must be accepted and always scored as wrong.
         const failed = expectStatus(
           await request(`/quiz/${second.attemptId}/submit`, {
             account: user,
             method: "POST",
-            json: { answers: [0, 0, 0, 0, 0] },
+            json: { answers: [-1, 0, 0, 0, 0] },
           }),
           200,
         );
         assert.equal(failed.passed, false);
+        assert.equal(failed.results[0].yourAnswer, -1);
+        assert.equal(failed.results[0].correct, false);
         expectStatus(
           await request(`/quiz/result/${started.attemptId}`, {
             account: other,

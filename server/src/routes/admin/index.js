@@ -13,10 +13,12 @@ import statisticsRoutes from './statisticsRoutes.js';
 import ticketRoutes from './ticketRoutes.js';
 
 import memoryRoutes from './memoryRoutes.js';
+import quizRoutes from './quizRoutes.js';
 
 const router = Router();
 router.use(requireAuth, requireAdmin);
 router.use('/memories', memoryRoutes);
+router.use('/quiz', quizRoutes);
 router.use('/dashboard', dashboardRoutes);
 router.use('/crush-letters', crushLetterRoutes);
 router.use('/stalls', stallRoutes);

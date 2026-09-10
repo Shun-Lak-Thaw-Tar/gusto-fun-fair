@@ -71,7 +71,10 @@ test(
         body = JSON.stringify(json);
       }
       const response = await fetch(base + path, { method, headers, body });
-      return { status: response.status, body: await response.json() };
+      return {
+        status: response.status,
+        body: response.status === 204 ? null : await response.json(),
+      };
     };
     const expectStatus = (result, status) => {
       assert.equal(result.status, status, JSON.stringify(result.body));
@@ -138,6 +141,60 @@ test(
         200,
       );
       return { user, submitted };
+    };
+
+    // Inserts an already-submitted, passing attempt directly so the leaderboard
+    // cap/ordering test doesn't have to spend the shared Quiz rate-limit budget
+    // (20 requests / 10 min) on a real start+submit round trip per candidate.
+    const seedPassedAttempt = async (elapsedMs) => {
+      candidateCounter += 1;
+      const user = await User.create({
+        name: `Candidate ${candidateCounter}`,
+        nameNormalized: `candidate ${candidateCounter}`,
+        passwordHash: "x",
+        role: "user",
+      });
+      const order = await Order.create({
+        eventId: event._id,
+        userId: user._id,
+        status: "PAYMENT_APPROVED",
+        inventoryStatus: "SOLD",
+        items: [
+          {
+            stallId: new mongoose.Types.ObjectId(),
+            stallName: "Test Stall",
+            foodName: "Test Food",
+            quantity: 1,
+            unitPrice: 1000,
+            subtotal: 1000,
+          },
+        ],
+        totalQuantity: 1,
+        totalAmount: 1000,
+        paymentReference: `FF-SEED-${candidateCounter}`,
+        preorderPrivilegeCode: `FF-PRIV-SEED-${candidateCounter}`,
+        reservationExpiresAt: new Date(now.getTime() + 60_000),
+      });
+      const submittedAt = new Date();
+      await QuizAttempt.create({
+        userId: user._id,
+        orderId: order._id,
+        questions: Array.from({ length: 5 }, (_, index) => ({
+          questionId: new mongoose.Types.ObjectId(),
+          version: 1,
+          question: `Seeded question ${index}`,
+          options: ["A", "B", "C", "D"],
+          correctOption: 0,
+        })),
+        answers: [0, 0, 0, 0, 0],
+        score: 5,
+        passed: true,
+        timedOut: false,
+        elapsedMs,
+        reward: { type: "NOT_ISSUED" },
+        startedAt: new Date(submittedAt.getTime() - elapsedMs),
+        submittedAt,
+      });
     };
 
     await t.test(
@@ -231,18 +288,20 @@ test(
     );
 
     await t.test(
-      "leaderboard is public, ranks by elapsed time ascending, and caps at five",
+      "leaderboard is public, ranks by elapsed time ascending, and caps at ten",
       async () => {
-        // Six passing candidates so the slowest is pushed off the top five.
-        const timings = [20_000, 500, 49_000, 5_000, 1_000, 10_000];
-        for (const elapsedMs of timings)
-          await runAttempt({ elapsedMs, correct: true });
+        // Eleven passing candidates so the slowest is pushed off the top ten.
+        const timings = [
+          20_000, 500, 49_000, 5_000, 1_000, 10_000, 15_000, 2_000, 30_000,
+          40_000, 3_000,
+        ];
+        for (const elapsedMs of timings) await seedPassedAttempt(elapsedMs);
 
         const board = expectStatus(
           await request("/quiz/leaderboard"),
           200,
         );
-        assert.equal(board.leaderboard.length, 5);
+        assert.equal(board.leaderboard.length, 10);
         const times = board.leaderboard.map((entry) => entry.elapsedMs);
         assert.deepEqual(
           times,
@@ -251,9 +310,73 @@ test(
         assert.equal(times.includes(49_000), false);
         assert.deepEqual(
           board.leaderboard.map((entry) => entry.rank),
-          [1, 2, 3, 4, 5],
+          [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
         );
         assert.ok(board.leaderboard[0].name);
+      },
+    );
+
+    await t.test(
+      "admin can see every passing attempt and remove one from the leaderboard",
+      async () => {
+        const admin = await User.create({
+          name: "Quiz Admin",
+          nameNormalized: "quiz admin",
+          passwordHash: "x",
+          role: "admin",
+        });
+        const other = await User.create({
+          name: "Not An Admin",
+          nameNormalized: "not an admin",
+          passwordHash: "x",
+          role: "user",
+        });
+        expectStatus(
+          await request("/admin/quiz/leaderboard", { account: other }),
+          403,
+        );
+        const adminBoard = expectStatus(
+          await request("/admin/quiz/leaderboard", { account: admin }),
+          200,
+        );
+        // More than the public cap of ten, since eleven passing candidates
+        // were seeded above.
+        assert.equal(adminBoard.leaderboard.length, 11);
+        const target = adminBoard.leaderboard[0];
+        assert.ok(target.attemptId);
+
+        expectStatus(
+          await request(`/admin/quiz/attempts/${target.attemptId}`, {
+            account: other,
+            method: "DELETE",
+          }),
+          403,
+        );
+        expectStatus(
+          await request(`/admin/quiz/attempts/${target.attemptId}`, {
+            account: admin,
+            method: "DELETE",
+          }),
+          204,
+        );
+        expectStatus(
+          await request(`/admin/quiz/attempts/${target.attemptId}`, {
+            account: admin,
+            method: "DELETE",
+          }),
+          404,
+        );
+
+        const publicBoard = expectStatus(
+          await request("/quiz/leaderboard"),
+          200,
+        );
+        assert.equal(
+          publicBoard.leaderboard.some(
+            (entry) => entry.elapsedMs === target.elapsedMs,
+          ),
+          false,
+        );
       },
     );
   },
