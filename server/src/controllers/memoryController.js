@@ -50,10 +50,12 @@ export const createMemory = async (req, res) => {
   if (!parsed.success)
     throw new ApiError(400, "Caption must be at most 300 characters");
   const event = await getCurrentEvent();
-  if (!event.featureFlags?.memoriesEnabled)
+  if (!event.featureFlags?.memoriesEnabled && !req.memoryBoothTest)
     throw new ApiError(409, "Memories are currently disabled");
-  assertEventActive(event);
-  await assertSnapWindow(event._id);
+  if (!req.memoryBoothTest) {
+    assertEventActive(event);
+    await assertSnapWindow(event._id);
+  }
   const asset = await uploadImage({
     file: req.file,
     userId: req.user._id,
@@ -66,6 +68,7 @@ export const createMemory = async (req, res) => {
       asset,
       caption: parsed.data.caption,
       privilegeCode: parsed.data.privilegeCode,
+      testMode: req.memoryBoothTest,
     });
     res.status(201).json({
       memory: {
@@ -149,10 +152,12 @@ export const removeMemory = async (req, res) => {
   await deleteSnap({ id: req.params.id, user: req.user, admin: true });
   res.status(204).end();
 };
-export const getSnapWindow = async (_req, res) =>
-  res.json({ snaps: await currentSnapContext() });
+export const getSnapWindow = async (req, res) =>
+  res.json({ snaps: await currentSnapContext(undefined, req.memoryBoothTest) });
 export const getMySnapAllowance = async (req, res) =>
-  res.json({ snaps: await currentSnapContext(req.user._id) });
+  res.json({
+    snaps: await currentSnapContext(req.user._id, req.memoryBoothTest),
+  });
 export const getMyMemories = async (req, res) => {
   const event = await getCurrentEvent();
   const memories = await Memory.find({
@@ -192,7 +197,7 @@ export const reactToMemory = async (req, res) => {
     .safeParse(req.body);
   if (!parsed.success)
     throw new ApiError(400, "Reaction must be LIKE, DISLIKE, or null");
-  assertEventActive(await getCurrentEvent());
+  if (!req.memoryBoothTest) assertEventActive(await getCurrentEvent());
   res.json({
     reaction: await setReaction({
       memoryId: req.params.id,

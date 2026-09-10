@@ -16,6 +16,13 @@ const crushLetterSchema = new mongoose.Schema(
       index: true,
       immutable: true,
     },
+    eventId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "EventConfig",
+      required: true,
+      index: true,
+      immutable: true,
+    },
     recipientName: {
       type: String,
       required: true,

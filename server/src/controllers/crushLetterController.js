@@ -2,12 +2,17 @@ import { z } from "zod";
 import CrushLetter from "../models/CrushLetter.js";
 import EventConfig from "../models/EventConfig.js";
 import ApiError from "../utils/ApiError.js";
-import { assertEventActive } from "../services/eventService.js";
+import { assertEventActive, getCurrentEvent } from "../services/eventService.js";
+import {
+  createCrushLetter as createCrushLetterEntry,
+  crushLetterContext,
+} from "../services/crushLetterService.js";
 
 const crushLetterSchema = z
   .object({
     recipientName: z.string().trim().min(1).max(100),
     message: z.string().trim().min(1).max(1000),
+    privilegeCode: z.string().trim().min(1).optional(),
   })
   .strict();
 const paginationSchema = z
@@ -28,9 +33,9 @@ export const createCrushLetter = async (req, res) => {
   const event = await EventConfig.findOne({ configKey: "current" });
   if (!event)
     throw new ApiError(503, "Current event configuration is unavailable");
-  assertEventActive(event);
-  if (!event?.featureFlags?.crushLettersEnabled)
+  if (!event?.featureFlags?.crushLettersEnabled && !req.crushLetterBoothTest)
     throw new ApiError(409, "Crush Letter submissions are currently closed.");
+  if (!req.crushLetterBoothTest) assertEventActive(event);
   const parsed = crushLetterSchema.safeParse(req.body);
 
   if (!parsed.success) {
@@ -41,11 +46,12 @@ export const createCrushLetter = async (req, res) => {
     );
   }
 
-  const crushLetter = await CrushLetter.create({
-    authorUserId: req.user._id,
+  const crushLetter = await createCrushLetterEntry({
+    userId: req.user._id,
+    eventId: event._id,
     recipientName: parsed.data.recipientName,
     message: parsed.data.message,
-    isAnonymous: true,
+    privilegeCode: parsed.data.privilegeCode,
   });
 
   res.status(201).json({
@@ -57,6 +63,11 @@ export const createCrushLetter = async (req, res) => {
       status: crushLetter.status,
     },
   });
+};
+
+export const getCrushLetterAllowance = async (req, res) => {
+  const event = await getCurrentEvent();
+  res.json({ letters: await crushLetterContext(req.user._id, event._id) });
 };
 
 export const listCrushLetters = async (req, res) => {

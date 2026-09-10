@@ -20,7 +20,7 @@ const schema = new mongoose.Schema(
     },
     privilege: {
       type: String,
-      enum: ["MEMORY_UPLOAD", "QUIZ"],
+      enum: ["MEMORY_UPLOAD", "QUIZ", "CRUSH_LETTER"],
       required: true,
     },
     consumedAt: { type: Date, default: Date.now },

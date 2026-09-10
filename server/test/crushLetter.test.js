@@ -6,6 +6,7 @@ import app from "../src/app.js";
 import env from "../src/config/env.js";
 import CrushLetter from "../src/models/CrushLetter.js";
 import EventConfig from "../src/models/EventConfig.js";
+import Order from "../src/models/Order.js";
 import Stall from "../src/models/Stall.js";
 import User from "../src/models/User.js";
 import { crushLetterSubmissionLimiter } from "../src/middleware/crushLetterRateLimit.js";
@@ -19,11 +20,12 @@ test("Crush Letter V1.1", async (t) => {
   await Promise.all([
     CrushLetter.init(),
     EventConfig.init(),
+    Order.init(),
     Stall.init(),
     User.init(),
   ]);
   const eventDay = new Date();
-  await EventConfig.create({
+  const event = await EventConfig.create({
     configKey: "current",
     eventName: "Crush Test Event",
     eventDate: eventDay,
@@ -232,20 +234,32 @@ test("Crush Letter V1.1", async (t) => {
   const [approvedOld, approvedNew, pending, rejected, hidden] =
     await CrushLetter.create([
       {
+        eventId: event._id,
         recipientName: "Approved Old",
         message: "old",
         status: "APPROVED",
         createdAt: new Date(now - 2000),
       },
       {
+        eventId: event._id,
         recipientName: "Approved New",
         message: "new",
         status: "APPROVED",
         createdAt: new Date(now - 1000),
       },
-      { recipientName: "Pending", message: "pending" },
-      { recipientName: "Rejected", message: "rejected", status: "REJECTED" },
-      { recipientName: "Hidden", message: "hidden", status: "HIDDEN" },
+      { eventId: event._id, recipientName: "Pending", message: "pending" },
+      {
+        eventId: event._id,
+        recipientName: "Rejected",
+        message: "rejected",
+        status: "REJECTED",
+      },
+      {
+        eventId: event._id,
+        recipientName: "Hidden",
+        message: "hidden",
+        status: "HIDDEN",
+      },
     ]);
   await t.test(
     "public listing returns only approved letters newest first",
@@ -386,6 +400,7 @@ test("Crush Letter V1.1", async (t) => {
   );
   await t.test("PENDING transitions to REJECTED", async () => {
     const newPending = await CrushLetter.create({
+      eventId: event._id,
       recipientName: "Review Reject",
       message: "reject me",
     });
@@ -537,12 +552,21 @@ test("Crush Letter V1.1", async (t) => {
           ).status,
           400,
         );
-      for (let index = 0; index < 30; index += 1)
+      // The per-user letter allowance is exhausted after one letter, so the
+      // limiter is exercised with 30 distinct users (all on the same test IP)
+      // rather than 30 letters from a single account.
+      for (let index = 0; index < 30; index += 1) {
+        const rateUser = await User.create({
+          name: `Rate Limit ${index}`,
+          nameNormalized: `rate limit ${index}`,
+          passwordHash: "test",
+          role: "user",
+        });
         assert.equal(
           (
             await request("/crush-letters", {
               method: "POST",
-              headers: auth(user),
+              headers: auth(rateUser),
               body: {
                 recipientName: `Rate ${index}`,
                 message: "TEST rate message",
@@ -551,17 +575,145 @@ test("Crush Letter V1.1", async (t) => {
           ).status,
           201,
         );
+      }
+      const overflowUser = await User.create({
+        name: "Rate Limit Overflow",
+        nameNormalized: "rate limit overflow",
+        passwordHash: "test",
+        role: "user",
+      });
       assert.equal(
         (
           await request("/crush-letters", {
             method: "POST",
-            headers: auth(user),
+            headers: auth(overflowUser),
             body: validBody,
           })
         ).status,
         429,
       );
       resetRateLimit();
+    },
+  );
+
+  await t.test(
+    "the first letter is free; a second requires an eligible pre-order code, unlocking a third",
+    async () => {
+      const allowanceUser = await User.create({
+        name: "Allowance Candidate",
+        nameNormalized: "allowance candidate",
+        passwordHash: "test",
+        role: "user",
+      });
+      const zeroAllowance = (
+        await request("/crush-letters/allowance", {
+          headers: auth(allowanceUser),
+        })
+      ).body.letters;
+      assert.deepEqual(zeroAllowance, { allowance: 1, used: 0, remaining: 1 });
+
+      assert.equal(
+        (
+          await request("/crush-letters", {
+            method: "POST",
+            headers: auth(allowanceUser),
+            body: { recipientName: "First", message: "My free letter" },
+          })
+        ).status,
+        201,
+      );
+      const afterFirst = (
+        await request("/crush-letters/allowance", {
+          headers: auth(allowanceUser),
+        })
+      ).body.letters;
+      assert.deepEqual(afterFirst, { allowance: 1, used: 1, remaining: 0 });
+
+      const secondWithoutCode = await request("/crush-letters", {
+        method: "POST",
+        headers: auth(allowanceUser),
+        body: { recipientName: "Second", message: "No code yet" },
+      });
+      assert.equal(secondWithoutCode.status, 409);
+      assert.match(secondWithoutCode.body.error.message, /pre-order code/i);
+
+      const secondWithBadCode = await request("/crush-letters", {
+        method: "POST",
+        headers: auth(allowanceUser),
+        body: {
+          recipientName: "Second",
+          message: "Bad code",
+          privilegeCode: "NOT-A-REAL-CODE",
+        },
+      });
+      assert.equal(secondWithBadCode.status, 409);
+
+      const code = "FF-PRIV-CRUSH-1";
+      await Order.create({
+        eventId: event._id,
+        userId: allowanceUser._id,
+        status: "PAYMENT_APPROVED",
+        inventoryStatus: "SOLD",
+        items: [
+          {
+            stallId: new mongoose.Types.ObjectId(),
+            stallName: "Test Stall",
+            foodName: "Test Food",
+            quantity: 1,
+            unitPrice: 1000,
+            subtotal: 1000,
+          },
+        ],
+        totalQuantity: 1,
+        totalAmount: 1000,
+        paymentReference: "FF-CRUSH-1",
+        preorderPrivilegeCode: code,
+        reservationExpiresAt: new Date(now + 60_000),
+      });
+
+      assert.equal(
+        (
+          await request("/crush-letters", {
+            method: "POST",
+            headers: auth(allowanceUser),
+            body: {
+              recipientName: "Second",
+              message: "Now with a code",
+              privilegeCode: code,
+            },
+          })
+        ).status,
+        201,
+      );
+      const afterSecond = (
+        await request("/crush-letters/allowance", {
+          headers: auth(allowanceUser),
+        })
+      ).body.letters;
+      assert.deepEqual(afterSecond, { allowance: 3, used: 2, remaining: 1 });
+
+      // The third letter is covered by the same already-consumed privilege,
+      // no code required again.
+      assert.equal(
+        (
+          await request("/crush-letters", {
+            method: "POST",
+            headers: auth(allowanceUser),
+            body: { recipientName: "Third", message: "Covered by the code" },
+          })
+        ).status,
+        201,
+      );
+      assert.equal(
+        (
+          await request("/crush-letters", {
+            method: "POST",
+            headers: auth(allowanceUser),
+            body: { recipientName: "Fourth", message: "Should be blocked" },
+          })
+        ).status,
+        409,
+      );
     },
   );
 });

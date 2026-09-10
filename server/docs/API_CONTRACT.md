@@ -24,7 +24,9 @@ Return available sellable `StallFood` entries enriched with `stallFoodId`, `stal
 
 ### `POST /api/crush-letters` — authenticated, event day
 
-Accepts strict `{ "recipientName": "...", "message": "..." }` input without login. Recipient and message are trimmed, required, and limited to 100 and 1000 characters. Submission requires `featureFlags.crushLettersEnabled = true`; otherwise it returns `409`. New letters are always anonymous and `PENDING`. The safe `201` response confirms submission for review without returning the message, version field, or moderation audit data. The route permits 30 successful submissions per transient IP key per ten minutes and returns `429` when exceeded; failed/disabled requests do not consume quota and IP addresses are not persisted.
+Accepts strict `{ "recipientName": "...", "message": "...", "privilegeCode": "..." }` input; `privilegeCode` is optional and only needed from the second letter onward. Recipient and message are trimmed, required, and limited to 100 and 1000 characters. Submission requires `featureFlags.crushLettersEnabled = true` and the configured event day; otherwise it returns `409`. New letters are always anonymous and `PENDING`. The safe `201` response confirms submission for review without returning the message, version field, or moderation audit data. The route permits 30 successful submissions per transient IP key per ten minutes and returns `429` when exceeded; failed/disabled requests do not consume quota and IP addresses are not persisted.
+
+Each user gets one free letter per event. A second and third letter require `privilegeCode` containing the authenticated owner's approved order `preorderPrivilegeCode`; that privilege is consumed once for `CRUSH_LETTER` and then covers both extra letters (raising the allowance to 3 total). `GET /api/crush-letters/allowance` (authenticated) returns `{ "letters": { "allowance", "used", "remaining" } }` for the current user.
 
 ### `GET /api/crush-letters?page=1&limit=20` — public
 
@@ -183,7 +185,7 @@ Admin clients should show confirmation dialogs before changing operational switc
 
 ### Letters
 
-`POST /api/crush-letters` now requires authentication and is allowed only on the configured event day. Body: `{ "recipientName": "...", "message": "..." }`. The authenticated user is stored privately as `authorUserId`; public responses never expose it. New letters are `PENDING` and only `APPROVED` letters appear in `GET /api/crush-letters`. Admin moderation uses `GET /api/admin/crush-letters`, `GET /api/admin/crush-letters/:id`, and `PATCH /api/admin/crush-letters/:id/review` with `{ "decision": "APPROVED" }` or `{ "decision": "REJECTED", "reason": "..." }`.
+`POST /api/crush-letters` now requires authentication and is allowed only on the configured event day. Body: `{ "recipientName": "...", "message": "...", "privilegeCode": "..." }`. The authenticated user is stored privately as `authorUserId`; public responses never expose it. New letters are `PENDING` and only `APPROVED` letters appear in `GET /api/crush-letters`. The first letter is free; a second and third require the owner's approved order `preorderPrivilegeCode`, consumed once for `CRUSH_LETTER` (same pattern as Memories' `MEMORY_UPLOAD`). Admin moderation uses `GET /api/admin/crush-letters`, `GET /api/admin/crush-letters/:id`, and `PATCH /api/admin/crush-letters/:id/review` with `{ "decision": "APPROVED" }` or `{ "decision": "REJECTED", "reason": "..." }`.
 
 ### Memories
 

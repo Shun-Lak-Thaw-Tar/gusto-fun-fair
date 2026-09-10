@@ -13,6 +13,8 @@ Node.js 24+, Express 5, MongoDB/Mongoose, and Cloudflare R2 backend for food pre
 
 An unconfigured R2 connection returns 503 for uploads. Configure the snap window through the authenticated admin API before uploading photos.
 
+For a private event-day simulation, set `MEMORY_BOOTH_TEST_KEY` in the server environment and open the frontend route `/memory-booth-test`. The page requires a normal logged-in user and sends the key in a request header; it simulates the Memories feature flag and event-day window for that user only. Uploads still use the real R2 bucket and remain `PENDING` until an Admin approves them. Keep the variable unset in hosted environments when testing is finished.
+
 Database selection is environment-based: development reads `MONGODB_URI_DEVELOPMENT` (or uses the documented local default when omitted), production reads the private `MONGODB_URI_PRODUCTION` Atlas URI, and automated tests retain their explicitly isolated test databases. Missing `NODE_ENV` defaults to development. Production never falls back to a local database, and missing production configuration fails before connection without logging the URI. Real credentials belong only in an ignored `.env` file or deployment environment variables.
 
 The seed is idempotent for its named demo catalog and does not wipe unrelated records. It uses the database selected by `NODE_ENV`; therefore running `npm run seed:demo` in production intentionally affects the shared Atlas database and must be done with care. It is never run automatically at application startup. Optional demo admin credentials can be supplied through `SEED_ADMIN_NAME` and `SEED_ADMIN_PASSWORD` and are never hard-coded.

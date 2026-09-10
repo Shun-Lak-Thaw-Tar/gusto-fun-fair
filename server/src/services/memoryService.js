@@ -49,10 +49,11 @@ export const createSnap = async ({
   asset,
   caption,
   privilegeCode,
+  testMode = false,
 }) => {
   try {
     return await mongoose.connection.transaction(async (session) => {
-      await assertSnapWindow(eventId, session);
+      if (!testMode) await assertSnapWindow(eventId, session);
       const used = await Memory.countDocuments({
         eventId,
         userId,
@@ -142,7 +143,7 @@ export const setReaction = async ({ memoryId, userId, reaction }) =>
     return reaction;
   });
 
-export const currentSnapContext = async (userId) => {
+export const currentSnapContext = async (userId, testMode = false) => {
   const event = await getCurrentEvent();
   const settings = await SnapSettings.findOne({ eventId: event._id });
   const result = {
@@ -150,7 +151,7 @@ export const currentSnapContext = async (userId) => {
     timeZone: "Asia/Yangon",
     opensAt: settings?.opensAt || null,
     closesAt: settings?.closesAt || null,
-    status: windowStatus(settings),
+    status: testMode ? "OPEN" : windowStatus(settings),
   };
   if (userId) {
     result.allowance = await snapAllowance(userId, event._id);
