@@ -3,6 +3,7 @@ import ApiError from "../utils/ApiError.js";
 import {
   getQuizLeaderboard,
   getQuizResult,
+  provisionQuizTestCode,
   startQuiz,
   submitQuiz,
   validateQuizCode,
@@ -54,3 +55,8 @@ export const result = async (req, res) =>
 
 export const leaderboard = async (req, res) =>
   res.json(await getQuizLeaderboard());
+
+export const testProvisionCode = async (req, res) => {
+  if (!req.quizTest) throw new ApiError(404, "Not found");
+  res.json(await provisionQuizTestCode({ userId: req.user._id }));
+};

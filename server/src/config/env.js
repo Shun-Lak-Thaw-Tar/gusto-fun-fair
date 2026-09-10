@@ -39,6 +39,7 @@ const env = {
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || "7d",
   memoryBoothTestKey: process.env.MEMORY_BOOTH_TEST_KEY,
   crushLetterTestKey: process.env.CRUSH_LETTER_TEST_KEY,
+  quizTestKey: process.env.QUIZ_TEST_KEY,
   clientUrl: process.env.CLIENT_URL || "http://localhost:5173",
   r2AccountId: process.env.R2_ACCOUNT_ID,
   r2AccessKeyId: process.env.R2_ACCESS_KEY_ID,
