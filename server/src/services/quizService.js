@@ -181,6 +181,36 @@ export const getQuizLeaderboard = async (limit = 10) => {
   };
 };
 
+// Admin view: every passing attempt (not just the public top ten), with the
+// attemptId exposed so a specific entry can be targeted for removal.
+export const getAdminQuizLeaderboard = async () => {
+  const attempts = await QuizAttempt.find({ passed: true })
+    .sort({ elapsedMs: 1, submittedAt: 1 })
+    .populate("userId", "name")
+    .lean();
+  return {
+    leaderboard: attempts.map((attempt, index) => ({
+      attemptId: attempt._id,
+      rank: index + 1,
+      name: attempt.userId?.name || "A fairground guest",
+      score: attempt.score,
+      elapsedMs: attempt.elapsedMs,
+      submittedAt: attempt.submittedAt,
+    })),
+  };
+};
+
+// Removing an attempt only clears the leaderboard/result record. The order's
+// QUIZ privilege stays consumed (PreorderPrivilegeUse is untouched), so the
+// same pre-order code cannot be reused for a fresh attempt — this is a
+// disqualification, not a refund of their play.
+export const deleteQuizAttempt = async (attemptId) => {
+  if (!mongoose.isObjectIdOrHexString(attemptId))
+    throw new ApiError(400, "Invalid quiz attempt ID");
+  const attempt = await QuizAttempt.findByIdAndDelete(attemptId);
+  if (!attempt) throw new ApiError(404, "Quiz attempt not found");
+};
+
 export const getQuizResult = async ({ userId, attemptId }) => {
   const attempt = await QuizAttempt.findOne({ _id: attemptId, userId });
   if (!attempt) throw new ApiError(404, "Quiz attempt not found");

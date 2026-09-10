@@ -15,6 +15,7 @@ const paths = {
   features: <><path d="M4 6h7m6 0h3M4 12h2m6 0h8M4 18h10m6 0h0"/><circle cx="14" cy="6" r="3"/><circle cx="9" cy="12" r="3"/><circle cx="17" cy="18" r="3"/></>,
   memories: <><path d="M3 7h4l2-3h6l2 3h4v13H3V7z"/><circle cx="12" cy="13" r="4"/></>,
   'crush-letters': <><rect x="2" y="5" width="20" height="15" rx="2"/><path d="M2 7l10 7L22 7M9 8c-2-2 1-4 3-2 2-2 5 0 3 2l-3 3-3-3z"/></>,
+  'quiz-leaderboard': <><path d="M8 4h8v5a4 4 0 01-8 0V4zM5 5H3v2a3 3 0 003 3M19 5h2v2a3 3 0 01-3 3M9 15h6v3h2v2H7v-2h2v-3z"/></>,
 };
 export function NavIcon({name}) {
   return <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">{paths[name]||paths.dashboard}</svg>;

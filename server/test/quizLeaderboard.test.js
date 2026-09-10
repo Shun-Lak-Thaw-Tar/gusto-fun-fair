@@ -71,7 +71,10 @@ test(
         body = JSON.stringify(json);
       }
       const response = await fetch(base + path, { method, headers, body });
-      return { status: response.status, body: await response.json() };
+      return {
+        status: response.status,
+        body: response.status === 204 ? null : await response.json(),
+      };
     };
     const expectStatus = (result, status) => {
       assert.equal(result.status, status, JSON.stringify(result.body));
@@ -310,6 +313,70 @@ test(
           [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
         );
         assert.ok(board.leaderboard[0].name);
+      },
+    );
+
+    await t.test(
+      "admin can see every passing attempt and remove one from the leaderboard",
+      async () => {
+        const admin = await User.create({
+          name: "Quiz Admin",
+          nameNormalized: "quiz admin",
+          passwordHash: "x",
+          role: "admin",
+        });
+        const other = await User.create({
+          name: "Not An Admin",
+          nameNormalized: "not an admin",
+          passwordHash: "x",
+          role: "user",
+        });
+        expectStatus(
+          await request("/admin/quiz/leaderboard", { account: other }),
+          403,
+        );
+        const adminBoard = expectStatus(
+          await request("/admin/quiz/leaderboard", { account: admin }),
+          200,
+        );
+        // More than the public cap of ten, since eleven passing candidates
+        // were seeded above.
+        assert.equal(adminBoard.leaderboard.length, 11);
+        const target = adminBoard.leaderboard[0];
+        assert.ok(target.attemptId);
+
+        expectStatus(
+          await request(`/admin/quiz/attempts/${target.attemptId}`, {
+            account: other,
+            method: "DELETE",
+          }),
+          403,
+        );
+        expectStatus(
+          await request(`/admin/quiz/attempts/${target.attemptId}`, {
+            account: admin,
+            method: "DELETE",
+          }),
+          204,
+        );
+        expectStatus(
+          await request(`/admin/quiz/attempts/${target.attemptId}`, {
+            account: admin,
+            method: "DELETE",
+          }),
+          404,
+        );
+
+        const publicBoard = expectStatus(
+          await request("/quiz/leaderboard"),
+          200,
+        );
+        assert.equal(
+          publicBoard.leaderboard.some(
+            (entry) => entry.elapsedMs === target.elapsedMs,
+          ),
+          false,
+        );
       },
     );
   },

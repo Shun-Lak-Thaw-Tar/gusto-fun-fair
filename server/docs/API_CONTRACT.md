@@ -197,6 +197,8 @@ All Quiz routes except the leaderboard require authentication, the configured ev
 
 `GET /api/quiz/leaderboard` — public, no authentication required. Returns `{ "leaderboard": [{ "rank": 1, "name": "...", "elapsedMs": 12345, "submittedAt": "..." }] }` for the fastest ten passing (5/5, within the time limit) attempts, fastest first.
 
+`GET /api/admin/quiz/leaderboard` — admin-only. Same ranking as the public leaderboard but with no ten-entry cap and each row includes `attemptId` and `score`, so an admin can see (and act on) every qualifying attempt, not just the visible top ten. `DELETE /api/admin/quiz/attempts/:attemptId` removes one attempt (`204` on success, `404` if it doesn't exist). This only removes the attempt/result record — the underlying order's QUIZ privilege stays consumed, so the same pre-order code cannot be replayed; it is a disqualification, not a free retry.
+
 Question bank: `npm run seed:quiz` (from `backend/server`) parses `backend/questions.txt` (numbered `N.`/`(A)`-`(D)`/`Ans:` blocks, Ans either a letter A-D or the exact option text) and upserts each into `QuizQuestion` by question text, so it is safe to rerun after editing the source file.
 
 ## Production proxy and authentication throttling
