@@ -2,10 +2,11 @@ import Order from "../models/Order.js";
 import PreorderPrivilegeUse from "../models/PreorderPrivilegeUse.js";
 import ApiError from "../utils/ApiError.js";
 
-export const findEligibleOrder = async ({ userId, eventId, code, session }) => {
+// Privilege codes are shareable: the code just has to belong to some approved order for
+// this event, not one the redeemer placed themselves — e.g. a friend's order code is valid.
+export const findEligibleOrder = async ({ eventId, code, session }) => {
   const order = await Order.findOne({
     preorderPrivilegeCode: code,
-    userId,
     eventId,
     status: "PAYMENT_APPROVED",
   }).session(session || null);

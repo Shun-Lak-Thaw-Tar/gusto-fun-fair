@@ -22,9 +22,19 @@ import {
   uploadImage,
 } from "../services/mediaService.js";
 
+const MAX_CAPTION_WORDS = 25;
 const captionSchema = z
   .object({
-    caption: z.string().trim().max(300).optional().default(""),
+    caption: z
+      .string()
+      .trim()
+      .max(300)
+      .refine(
+        (value) => value.split(/\s+/).filter(Boolean).length <= MAX_CAPTION_WORDS,
+        { message: `Caption must be ${MAX_CAPTION_WORDS} words or fewer` },
+      )
+      .optional()
+      .default(""),
     privilegeCode: z.string().trim().min(1).optional(),
   })
   .strict();
@@ -48,7 +58,10 @@ const settingsSchema = z
 export const createMemory = async (req, res) => {
   const parsed = captionSchema.safeParse(req.body);
   if (!parsed.success)
-    throw new ApiError(400, "Caption must be at most 300 characters");
+    throw new ApiError(
+      400,
+      `Caption must be at most 300 characters and ${MAX_CAPTION_WORDS} words`,
+    );
   const event = await getCurrentEvent();
   if (!event.featureFlags?.memoriesEnabled && !req.memoryBoothTest)
     throw new ApiError(409, "Memories are currently disabled");

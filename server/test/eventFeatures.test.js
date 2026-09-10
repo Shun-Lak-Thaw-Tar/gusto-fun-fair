@@ -348,16 +348,17 @@ test(
     );
 
     await t.test(
-      "quiz validates ownership, returns five safe questions, snapshots, and isolates privilege use",
+      "quiz accepts a shared pre-order code, returns five safe questions, snapshots, and isolates privilege use",
       async () => {
-        expectStatus(
+        const sharedValidation = expectStatus(
           await request("/quiz/validate-code", {
             account: other,
             method: "POST",
             json: { code },
           }),
-          409,
+          200,
         );
+        assert.equal(sharedValidation.eligible, true);
         const validation = expectStatus(
           await request("/quiz/validate-code", {
             account: user,

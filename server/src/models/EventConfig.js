@@ -7,6 +7,7 @@ const featureFlagsSchema = new mongoose.Schema({
   quizEnabled: { type: Boolean, default: false },
 }, { _id: false, strict: 'throw' });
 
+
 const eventConfigSchema = new mongoose.Schema({
   configKey: { type: String, enum: ['current'], default: 'current', unique: true, immutable: true },
   eventName: { type: String, required: true, trim: true }, eventDate: { type: Date, required: true },
