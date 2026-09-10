@@ -209,7 +209,9 @@ export const provisionQuizTestCode = async ({ userId }) => {
     eventId: event._id,
     status: "PAYMENT_APPROVED",
     preorderPrivilegeCode: { $exists: true, $ne: null },
-  }).sort({ createdAt: -1 });
+  })
+    .select("+preorderPrivilegeCode")
+    .sort({ createdAt: -1 });
   if (reusable) {
     const [consumed, attemptExists] = await Promise.all([
       hasConsumedPrivilege({ userId, eventId: event._id, privilege: "QUIZ" }),
