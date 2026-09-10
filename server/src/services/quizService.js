@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import Order from "../models/Order.js";
 import QuizAttempt from "../models/QuizAttempt.js";
 import QuizQuestion from "../models/QuizQuestion.js";
 import { assertEventActive, assertQuizEnabled, getCurrentEvent } from "./eventService.js";
@@ -195,52 +194,4 @@ export const getQuizResult = async ({ userId, attemptId }) => {
     reward: attempt.reward || null,
     results: attempt.submittedAt ? buildResults(attempt) : null,
   };
-};
-
-// Test-only: the real Quiz privilege code must come from an approved order,
-// which is normally earned by placing and paying for a real preorder. This
-// mints a throwaway approved order for the current account so the code entry
-// step can be tested without going through checkout. Gated by
-// markQuizTest (a secret request header) — never reachable without it.
-export const provisionQuizTestCode = async ({ userId }) => {
-  const event = await getCurrentEvent();
-  const reusable = await Order.findOne({
-    userId,
-    eventId: event._id,
-    status: "PAYMENT_APPROVED",
-    preorderPrivilegeCode: { $exists: true, $ne: null },
-  })
-    .select("+preorderPrivilegeCode")
-    .sort({ createdAt: -1 });
-  if (reusable) {
-    const [consumed, attemptExists] = await Promise.all([
-      hasConsumedPrivilege({ userId, eventId: event._id, privilege: "QUIZ" }),
-      QuizAttempt.exists({ userId, orderId: reusable._id }),
-    ]);
-    if (!consumed && !attemptExists)
-      return { code: reusable.preorderPrivilegeCode };
-  }
-  const code = `FF-PRIV-TEST-${new mongoose.Types.ObjectId().toString().slice(-8).toUpperCase()}`;
-  await Order.create({
-    eventId: event._id,
-    userId,
-    status: "PAYMENT_APPROVED",
-    inventoryStatus: "SOLD",
-    items: [
-      {
-        stallId: new mongoose.Types.ObjectId(),
-        stallName: "Quiz test",
-        foodName: "Quiz test order",
-        quantity: 1,
-        unitPrice: 1000,
-        subtotal: 1000,
-      },
-    ],
-    totalQuantity: 1,
-    totalAmount: 1000,
-    paymentReference: `FF-QUIZTEST-${Date.now()}`,
-    preorderPrivilegeCode: code,
-    reservationExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-  });
-  return { code };
 };

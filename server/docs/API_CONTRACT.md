@@ -199,8 +199,6 @@ All Quiz routes except the leaderboard require authentication, the configured ev
 
 Question bank: `npm run seed:quiz` (from `backend/server`) parses `backend/questions.txt` (numbered `N.`/`(A)`-`(D)`/`Ans:` blocks, Ans either a letter A-D or the exact option text) and upserts each into `QuizQuestion` by question text, so it is safe to rerun after editing the source file.
 
-`POST /api/quiz/test/provision-code` (authenticated) — test-only, `404`s unless header `x-quiz-test-key` matches `QUIZ_TEST_KEY`. Mints (or reuses, if one is still unused) a throwaway `PAYMENT_APPROVED` order with a fresh `preorderPrivilegeCode` for the calling account, so the Quiz code-entry step can be tested without a real preorder. Returns `{ "code": "FF-PRIV-TEST-..." }`. Keep `QUIZ_TEST_KEY` unset in hosted environments unless actively testing.
-
 ## Production proxy and authentication throttling
 
 See [EC2 networking](EC2_NETWORKING.md) for localhost binding, trusted Nginx headers and auth limits. Login/register may return `429` with `Retry-After` and a user-facing message. Limits run before credential verification; successful login does not consume the name/IP failure allowance.
